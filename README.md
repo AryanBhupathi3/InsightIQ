@@ -3,6 +3,9 @@
 **Mathematical Framework for Business Optimization**
 Team 3 — M. Rikhitha Reddy (25143) · P. Sai Chandana (25140) · G. Puran Reddy (25118) · Aryan Bhupathi (25107)
 
+**Live demo:** https://insightiq-aryanthecubers-projects.vercel.app
+Deploys automatically from `master` on every push.
+
 > **Scope note:** InsightIQ's overall framework covers demand, supply, and pricing decisions. This phase of the project is scoped to the **seller side only** — supplier selection, procurement cost, inventory/demand forecasting, and pricing. Buyer/customer-facing analytics (e.g. customer segmentation, order/checkout behaviour) are out of scope for now and left for a later phase.
 
 ## 1. Overview
