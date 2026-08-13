@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* ---- Fonts -----------------------------------------------------------
+   Self-hosted via @fontsource (not a Google Fonts CDN @import) — this
+   dev environment has no outbound access to fonts.googleapis.com, so a
+   CDN @import silently fails and every page falls back to whatever
+   system font the browser picks (Arial, on Windows), even though
+   getComputedStyle still reports the *intended* font-family — the
+   fallback is invisible unless you check document.fonts directly.
+   Instrument Serif Italic: the one editorial "thesis" moment (hero only).
+   IBM Plex Sans: UI/body — technical/engineering heritage, not the
+   generic Inter default.
+   IBM Plex Mono: data, labels, formulas, tabular figures.
+------------------------------------------------------------------------ */
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+
+@theme {
+  --font-display: 'Instrument Serif', serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* ground — Atlantic Blue family, darkened for a true page background;
+     the surface tone sits at the reference swatch itself */
+  --color-bg: #072232;
+  --color-surface: #0F4B70;
+  --color-surface-raised: #155E86;
+  --color-surface-inset: #04141E;
+  --color-border: rgba(228,247,255,0.12);
+  --color-border-strong: rgba(228,247,255,0.20);
+
+  /* ink — a muted, less-saturated cool white, so it reads as body text and
+     doesn't compete with the vivid accent below */
+  --color-ink: #E7EEF1;
+  --color-ink-soft: rgba(231,238,241,0.68);
+  --color-ink-muted: rgba(231,238,241,0.46);
+  --color-ink-faint: rgba(231,238,241,0.26);
+
+  /* brand accent — Soft Sky Blue at full brightness, a vivid pop against
+     the dark Atlantic Blue ground */
+  --color-accent: #C4F8FF;
+  --color-accent-hover: #9FEFFF;
+  --color-accent-soft: rgba(196,248,255,0.16);
+  --color-accent-ring: rgba(196,248,255,0.35);
+
+  /* validated categorical chart series — slot 1 is a mid-tone step of the
+     same brand hue (pure Soft Sky Blue is too light to pass the
+     categorical lightness band, so it's reserved for UI, not data) */
+  --color-series-1: #1F9FB8;
+  --color-series-2: #D9691E;
+  --color-series-3: #199E70;
+  --color-series-4: #C98500;
+  --color-series-5: #D55181;
+  --color-series-6: #6B8AE0;
+
+  /* fixed status palette (never themed, per dataviz skill) */
+  --color-good: #0CA30C;
+  --color-warning: #FAB219;
+  --color-serious: #EC835A;
+  --color-critical: #D03B3B;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #072232;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
