@@ -56,12 +56,16 @@ export default function LiveDemo() {
   const done = step >= run.result.priceHistory.length - 1;
 
   return (
-    <div className="rounded-xl border border-border bg-surface/60 backdrop-blur-sm p-5">
-      <div className="flex items-center justify-between mb-1">
+    <div className="glass-raised rounded-3xl p-6">
+      <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-[0.65rem] tracking-wider uppercase text-ink-muted">
           live — gradient ascent on Π(p)
         </span>
-        <span className={`font-mono text-[0.65rem] uppercase ${done ? "text-good" : "text-accent"}`}>
+        <span className={`font-mono text-[0.65rem] uppercase flex items-center gap-1.5 ${done ? "text-good" : "text-accent"}`}>
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${done ? "bg-good" : "bg-accent"}`}
+            style={{ boxShadow: `0 0 8px 1px ${done ? "var(--color-good)" : "var(--color-accent-ring)"}` }}
+          />
           {done ? "converged" : "solving…"}
         </span>
       </div>
@@ -69,26 +73,27 @@ export default function LiveDemo() {
         <path d={pathD} fill="none" stroke="var(--color-series-1)" strokeWidth={1.6} opacity={0.55} />
         {dot && (
           <motion.circle
-            r={4.5}
+            r={5}
             fill="var(--color-accent)"
+            style={{ filter: "drop-shadow(0 0 6px var(--color-accent-ring))" }}
             initial={false}
             animate={{ x: dot[0], y: dot[1] }}
             transition={{ duration: 0.05, ease: "linear" }}
           />
         )}
       </svg>
-      <div className="flex items-center gap-6 mt-2">
+      <div className="flex items-center gap-7 mt-3">
         <div>
           <div className="font-mono text-[0.62rem] uppercase text-ink-muted">price</div>
-          <div className="font-semibold tabular text-ink">${price.toFixed(2)}</div>
+          <div className="text-[1.15rem] font-bold tracking-[-0.01em] tabular text-ink">${price.toFixed(2)}</div>
         </div>
         <div>
           <div className="font-mono text-[0.62rem] uppercase text-ink-muted">profit</div>
-          <div className="font-semibold tabular text-ink">${profit.toFixed(0)}</div>
+          <div className="text-[1.15rem] font-bold tracking-[-0.01em] tabular text-ink">${profit.toFixed(0)}</div>
         </div>
         <div>
           <div className="font-mono text-[0.62rem] uppercase text-ink-muted">step</div>
-          <div className="font-semibold tabular text-ink">{step}/{run.result.priceHistory.length - 1}</div>
+          <div className="text-[1.15rem] font-bold tracking-[-0.01em] tabular text-ink">{step}/{run.result.priceHistory.length - 1}</div>
         </div>
       </div>
     </div>

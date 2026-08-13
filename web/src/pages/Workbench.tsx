@@ -7,12 +7,17 @@ import { fitWls, forecastHorizon } from "../lib/stats";
 import { fitMarkov, nStepDistribution } from "../lib/markov";
 import { solveSupplierSelection, kktReport } from "../lib/optimization";
 import { gradientAscent } from "../lib/pricing";
+import { LockIcon, LockedPanel } from "../components/Atoms";
 import DataTab from "../components/workbench/DataTab";
 import ForecastTab from "../components/workbench/ForecastTab";
 import UncertaintyTab from "../components/workbench/UncertaintyTab";
 import SupplierTab from "../components/workbench/SupplierTab";
 import PriceTab from "../components/workbench/PriceTab";
 import DecisionTab from "../components/workbench/DecisionTab";
+
+// Held back for the project review presentation — flip to [] (or remove
+// entries) when it's time to reveal these stages.
+const LOCKED_TABS: TabKey[] = ["price", "decision"];
 
 export type WorkbenchShared = ReturnType<typeof useWorkbenchState> & { goToData: () => void };
 
@@ -91,34 +96,82 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
+const TAB_WIDTH = 108; // px — fixed so the clip-path indicator math is exact, no measurement needed
+
 export default function Workbench() {
   const [tab, setTab] = useState<TabKey>("data");
+  const [shakingKey, setShakingKey] = useState<TabKey | null>(null);
   const shared = { ...useWorkbenchState(), goToData: () => setTab("data") };
 
+  const activeIndex = TABS.findIndex((t) => t.key === tab);
+  const n = TABS.length;
+  const leftPct = (activeIndex / n) * 100;
+  const rightPct = ((n - 1 - activeIndex) / n) * 100;
+
+  const handleTabClick = (key: TabKey) => {
+    if (LOCKED_TABS.includes(key)) {
+      setShakingKey(key);
+      window.setTimeout(() => setShakingKey((k) => (k === key ? null : k)), 380);
+      return;
+    }
+    setTab(key);
+  };
+
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="border-b border-border sticky top-0 bg-bg/90 backdrop-blur-sm z-10">
-        <div className="max-w-6xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-sm bg-accent" />
+    <div className="min-h-screen">
+      <div className="sticky top-0 z-10 px-4 pt-4">
+        <div className="max-w-6xl mx-auto glass rounded-2xl">
+        <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
+          <Link to="/" className="pressable flex items-center gap-2">
+            <span className="w-2 h-2 rounded-sm bg-accent" style={{ boxShadow: "0 0 10px -1px var(--color-accent-ring)" }} />
             <span className="font-semibold text-[0.9rem]">InsightIQ</span>
           </Link>
-          <div className="flex items-center gap-1">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`relative text-[0.82rem] font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  tab === t.key ? "text-ink" : "text-ink-muted hover:text-ink-soft"
-                }`}
-              >
-                {tab === t.key && (
-                  <motion.span layoutId="tab-pill" className="absolute inset-0 bg-surface-raised rounded-lg" transition={{ duration: 0.25 }} />
-                )}
-                <span className="relative">{t.label}</span>
-              </button>
-            ))}
+
+          <div className="relative" style={{ width: TAB_WIDTH * n }}>
+            {/* base layer: all labels, muted/locked styling */}
+            <div className="relative flex">
+              {TABS.map((t) => {
+                const locked = LOCKED_TABS.includes(t.key);
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => handleTabClick(t.key)}
+                    aria-disabled={locked}
+                    style={{ width: TAB_WIDTH }}
+                    className={`pressable flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg ${
+                      locked
+                        ? `cursor-not-allowed text-ink-faint ${shakingKey === t.key ? "shake" : ""}`
+                        : "cursor-pointer text-ink-muted hover:text-ink-soft"
+                    }`}
+                  >
+                    {locked && <LockIcon className="w-3 h-3 flex-shrink-0" />}
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* active copy: identical layout, active styling, revealed only over the active tab */}
+            <div
+              className="absolute inset-0 flex pointer-events-none"
+              style={{
+                clipPath: `inset(0 ${rightPct}% 0 ${leftPct}%)`,
+                transition: "clip-path 250ms var(--ease-in-out)",
+              }}
+            >
+              {TABS.map((t) => (
+                <div
+                  key={t.key}
+                  style={{ width: TAB_WIDTH }}
+                  className="flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg bg-surface-raised text-ink"
+                >
+                  {LOCKED_TABS.includes(t.key) && <LockIcon className="w-3 h-3 flex-shrink-0" />}
+                  {t.label}
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -127,14 +180,14 @@ export default function Workbench() {
             key={tab}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
           >
             {tab === "data" && <DataTab {...shared} />}
             {tab === "forecast" && <ForecastTab {...shared} />}
             {tab === "uncertainty" && <UncertaintyTab {...shared} />}
             {tab === "supplier" && <SupplierTab {...shared} />}
-            {tab === "price" && <PriceTab {...shared} />}
-            {tab === "decision" && <DecisionTab {...shared} />}
+            {tab === "price" && (LOCKED_TABS.includes("price") ? <LockedPanel label="Price Optimization" /> : <PriceTab {...shared} />)}
+            {tab === "decision" && (LOCKED_TABS.includes("decision") ? <LockedPanel label="Decision Engine" /> : <DecisionTab {...shared} />)}
           </motion.div>
       </div>
     </div>

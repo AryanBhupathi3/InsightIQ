@@ -8,7 +8,7 @@ export default function FormulaBlock({ label, tex }: { label: string; tex: strin
     [tex]
   );
   return (
-    <div className="border-l-2 border-accent/70 pl-4 py-1">
+    <div className="glass rounded-xl border-l-2 border-l-accent pl-4 pr-4 py-3 my-2.5">
       <div className="font-mono text-[0.65rem] tracking-wider uppercase text-ink-muted mb-1">{label}</div>
       <div className="text-ink [&_.katex]:text-[1.02rem]" dangerouslySetInnerHTML={{ __html: html }} />
     </div>

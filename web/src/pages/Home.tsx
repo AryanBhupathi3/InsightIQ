@@ -12,21 +12,24 @@ const STEPS = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-bg">
-      <nav className="max-w-6xl mx-auto px-6 sm:px-10 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-sm bg-accent" />
-          <span className="font-semibold text-[0.95rem]">InsightIQ</span>
+    <div className="min-h-screen">
+      <nav className="max-w-6xl mx-auto px-6 sm:px-10 pt-6">
+        <div className="glass rounded-full px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-sm bg-accent" style={{ boxShadow: "0 0 12px -1px var(--color-accent-ring)" }} />
+            <span className="font-semibold text-[0.95rem]">InsightIQ</span>
+          </div>
+          <Link
+            to="/app"
+            className="pressable text-[0.82rem] font-semibold px-4 py-1.5 rounded-full bg-accent text-bg hover:bg-accent-hover transition-[background-color] duration-150"
+            style={{ boxShadow: "0 4px 20px -4px var(--color-accent-ring)" }}
+          >
+            Open the workbench
+          </Link>
         </div>
-        <Link
-          to="/app"
-          className="text-[0.82rem] font-medium px-3.5 py-1.5 rounded-full bg-accent text-bg hover:bg-accent-hover transition-colors"
-        >
-          Open the workbench
-        </Link>
       </nav>
 
-      <header className="max-w-6xl mx-auto px-6 sm:px-10 pt-10 pb-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
+      <header className="max-w-6xl mx-auto px-6 sm:px-10 pt-14 pb-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
         <div>
           <Reveal>
             <span className="font-mono text-[0.7rem] tracking-wider uppercase text-accent">
@@ -34,7 +37,7 @@ export default function Home() {
             </span>
           </Reveal>
           <Reveal delay={0.06}>
-            <h1 className="font-display italic text-[3.4rem] sm:text-[4.4rem] leading-[0.95] mt-3 mb-5 text-balance">
+            <h1 className="font-display italic text-[4rem] sm:text-[5.4rem] leading-[0.94] tracking-[-0.03em] mt-3 mb-5 text-balance">
               Sell at the <span className="text-accent">provably optimal</span> price.
             </h1>
           </Reveal>
@@ -50,7 +53,8 @@ export default function Home() {
             <div className="flex items-center gap-4">
               <Link
                 to="/app"
-                className="text-[0.88rem] font-medium px-5 py-2.5 rounded-full bg-accent text-bg hover:bg-accent-hover transition-colors"
+                className="pressable text-[0.9rem] font-semibold px-6 py-3 rounded-full bg-accent text-bg hover:bg-accent-hover transition-[background-color] duration-150"
+                style={{ boxShadow: "0 8px 30px -6px var(--color-accent-ring)" }}
               >
                 Bring your own CSV →
               </Link>
@@ -59,7 +63,11 @@ export default function Home() {
           </Reveal>
         </div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.15 }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", bounce: 0, duration: 0.6, delay: 0.15 }}
+        >
           <LiveDemo />
         </motion.div>
       </header>
@@ -70,10 +78,10 @@ export default function Home() {
             The pipeline — four stages, eight steps
           </div>
         </Reveal>
-        <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+        <div className="grid sm:grid-cols-2 gap-4">
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={0.05 * i}>
-              <div className="flex gap-4">
+              <div className="glass rounded-2xl p-5 flex gap-4 h-full">
                 <span className="font-mono text-[0.78rem] text-accent pt-0.5">{s.n}</span>
                 <div>
                   <div className="font-semibold text-[0.98rem] mb-1">{s.title}</div>

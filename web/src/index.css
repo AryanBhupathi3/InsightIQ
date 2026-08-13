@@ -67,15 +67,49 @@
   --color-critical: #D03B3B;
 }
 
+/* ---- Motion tokens ----------------------------------------------------
+   Apple/animate-skill curves — built-in CSS easings are too weak for
+   anything deliberate. See .claude/skills/animate/SKILL.md.
+------------------------------------------------------------------------ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 html {
   color-scheme: dark;
 }
 
+/* Soft accent-tinted glow wash behind everything — the ground a glass
+   surface needs to actually read as translucent instead of just grey. */
 body {
-  background: var(--color-bg);
+  background:
+    radial-gradient(60% 50% at 15% 0%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 60%),
+    radial-gradient(50% 45% at 100% 20%, color-mix(in oklab, var(--color-series-2) 12%, transparent), transparent 60%),
+    var(--color-bg);
+  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Glass — the Apple material: a translucent, blurred, saturated surface
+   that separates structure without stealing focus. Use on cards, panels,
+   and any surface that should read as "floating" over the wash above. */
+.glass {
+  background: color-mix(in oklab, var(--color-surface) 55%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 8px 30px -12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.glass-raised {
+  background: color-mix(in oklab, var(--color-surface-raised) 60%, transparent);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 12px 40px -14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 ::selection {
@@ -87,10 +121,37 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Press feedback: respond on the press, not the release — Apple Design
+   Response principle. Scale, not opacity, so it reads as physical. */
+.pressable {
+  transition: transform 160ms var(--ease-out);
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+.pressable:disabled,
+.pressable[aria-disabled="true"] {
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Shake — feedback for a rejected action (a locked tab), so input is
+   always acknowledged even when it doesn't do anything. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
+.shake {
+  animation: shake 360ms var(--ease-in-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

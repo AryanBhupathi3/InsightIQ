@@ -30,7 +30,7 @@ export default function ForecastTab({ dataset, series, wls, forecast, horizon, s
   return (
     <div>
       <div className="mb-1 font-mono text-[0.7rem] tracking-wider uppercase text-accent">Stage 02 · Step 3</div>
-      <h1 className="font-display italic text-[2.1rem] leading-tight mb-2">Demand forecasting</h1>
+      <h1 className="font-display italic text-[2.5rem] leading-[1.02] tracking-[-0.02em] mb-3">Demand forecasting</h1>
       <p className="text-[0.9rem] text-ink-muted max-w-xl mb-6">
         Weighted Least Squares fits a trend to {mapping.demand ?? "the demand column"}, producing
         the expected demand D* the Optimization stage runs against.

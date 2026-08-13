@@ -37,7 +37,7 @@ export default function UploadPanel() {
               <button
                 key={s.key}
                 onClick={() => loadSample(s.key)}
-                className={`text-left text-[0.82rem] font-medium px-3.5 py-2.5 rounded-lg border transition-colors cursor-pointer ${
+                className={`pressable text-left text-[0.82rem] font-medium px-3.5 py-2.5 rounded-lg border transition-[background-color,border-color,color] duration-150 cursor-pointer ${
                   sourceLabel === s.label
                     ? "bg-accent-soft border-accent/50 text-accent"
                     : "border-border-strong text-ink-soft hover:border-accent/40 hover:text-ink"
@@ -56,7 +56,7 @@ export default function UploadPanel() {
           <div
             {...getRootProps()}
             onClick={open}
-            className={`h-full min-h-[86px] flex flex-col items-center justify-center text-center gap-1 rounded-lg border-2 border-dashed cursor-pointer transition-colors px-4 py-4 ${
+            className={`pressable h-full min-h-[86px] flex flex-col items-center justify-center text-center gap-1 rounded-lg border-2 border-dashed cursor-pointer transition-[background-color,border-color,color] duration-150 px-4 py-4 ${
               isDragActive ? "border-accent text-accent bg-accent-soft" : "border-border-strong text-ink-soft hover:text-ink hover:border-accent/50"
             }`}
           >

@@ -25,7 +25,7 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
   return (
     <div>
       <div className="mb-1 font-mono text-[0.7rem] tracking-wider uppercase text-accent">Stage 03 · Steps 5–6</div>
-      <h1 className="font-display italic text-[2.1rem] leading-tight mb-2">Supplier selection</h1>
+      <h1 className="font-display italic text-[2.5rem] leading-[1.02] tracking-[-0.02em] mb-3">Supplier selection</h1>
       <p className="text-[0.9rem] text-ink-muted max-w-xl mb-6">
         Solved exactly via water-filling — the unique lowest-cost way to source D* units across
         {" "}{groups.length} {groups.length === 1 ? "supplier" : "suppliers"} — then checked against the KKT conditions.

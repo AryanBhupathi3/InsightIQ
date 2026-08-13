@@ -9,7 +9,7 @@ export default function DataTab({ dataset, constraints, series, halflife, setHal
   return (
     <div>
       <div className="mb-1 font-mono text-[0.7rem] tracking-wider uppercase text-accent">Stage 01 · Steps 1–2</div>
-      <h1 className="font-display italic text-[2.1rem] leading-tight mb-2">Data layer</h1>
+      <h1 className="font-display italic text-[2.5rem] leading-[1.02] tracking-[-0.02em] mb-3">Data layer</h1>
       <p className="text-[0.9rem] text-ink-muted max-w-xl mb-6">
         Pick a sample dataset or drop in your own CSV. Columns map to roles below — every
         constraint the rest of the pipeline uses is derived from these, live.
