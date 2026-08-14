@@ -8,6 +8,8 @@ import { fitMarkov, nStepDistribution } from "../lib/markov";
 import { solveSupplierSelection, kktReport } from "../lib/optimization";
 import { gradientAscent } from "../lib/pricing";
 import { LockIcon, LockedPanel } from "../components/Atoms";
+import Logo from "../components/Logo";
+import ThemeToggle from "../components/ThemeToggle";
 import DataTab from "../components/workbench/DataTab";
 import ForecastTab from "../components/workbench/ForecastTab";
 import UncertaintyTab from "../components/workbench/UncertaintyTab";
@@ -158,10 +160,11 @@ export default function Workbench() {
         <div className="max-w-6xl mx-auto glass rounded-2xl">
         <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/" className="pressable flex items-center gap-2">
-            <span className="w-2 h-2 rounded-sm bg-accent" style={{ boxShadow: "0 0 10px -1px var(--color-accent-ring)" }} />
+            <Logo className="w-5 h-5 text-accent" />
             <span className="font-semibold text-[0.9rem]">InsightIQ</span>
           </Link>
 
+          <div className="flex items-center gap-3">
           {/* narrow viewports: the pixel-clustered bar above doesn't fit, so a
               native select stands in — grouped the same way, locked stages
               just disabled (a native <option disabled> is its own "no" feedback,
@@ -249,6 +252,8 @@ export default function Workbench() {
                 </div>
               ))}
             </div>
+          </div>
+          <ThemeToggle />
           </div>
         </div>
         </div>

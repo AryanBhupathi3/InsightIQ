@@ -81,6 +81,42 @@ html {
   color-scheme: dark;
 }
 
+/* ---- Light theme --------------------------------------------------
+   Same token names, swapped values — every utility class (bg-bg,
+   text-ink, bg-accent, ...) reads var(--color-*) at paint time, so
+   overriding the custom properties under this attribute selector re-
+   themes the whole app without a single dark:/light: variant anywhere.
+   Toggled by ThemeContext, which sets data-theme on <html>; the
+   blocking inline script in index.html sets it before first paint so
+   there's no flash of the wrong theme on load.
+   Accent flips from Soft Sky Blue (#C4F8FF, made for a dark ground) to
+   the deeper #0F4B70 from the logo system's light-background lockup —
+   the pale cyan has almost no contrast on a light page, so it can't
+   just carry over unchanged.
+------------------------------------------------------------------------ */
+:root[data-theme="light"] {
+  --color-bg: #F0F5F7;
+  --color-surface: #F5F9FA;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-inset: #E4ECEF;
+  --color-border: rgba(7,34,50,0.08);
+  --color-border-strong: rgba(7,34,50,0.14);
+
+  --color-ink: #0B2735;
+  --color-ink-soft: rgba(11,39,53,0.68);
+  --color-ink-muted: rgba(11,39,53,0.46);
+  --color-ink-faint: rgba(11,39,53,0.28);
+
+  --color-accent: #0F4B70;
+  --color-accent-hover: #0C3B58;
+  --color-accent-soft: rgba(15,75,112,0.10);
+  --color-accent-ring: rgba(15,75,112,0.28);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 /* Soft accent-tinted glow wash behind everything — the ground a glass
    surface needs to actually read as translucent instead of just grey. */
 body {
@@ -115,9 +151,19 @@ body {
   box-shadow: 0 12px 40px -14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
+/* A hard black shadow that reads as depth on a dark ground turns muddy
+   on a light one — swap to a soft navy-tinted shadow, and drop the
+   glossy top-highlight since white-on-near-white is invisible. */
+:root[data-theme="light"] .glass {
+  box-shadow: 0 8px 24px -14px rgba(7,34,50,0.18), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+:root[data-theme="light"] .glass-raised {
+  box-shadow: 0 10px 32px -14px rgba(7,34,50,0.22), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
 ::selection {
   background: var(--color-accent);
-  color: #072232;
+  color: var(--color-bg);
 }
 
 .tabular {

@@ -59,7 +59,7 @@ export default function UncertaintyTab({ dataset, markov, nStep, currentState, h
                   <div
                     key={j}
                     className="aspect-square flex items-center justify-center text-[0.78rem] font-mono rounded"
-                    style={{ background: `color-mix(in oklab, var(--color-accent) ${Math.round(v * 90)}%, var(--color-surface))`, color: v > 0.45 ? "#072232" : "var(--color-ink-soft)" }}
+                    style={{ background: `color-mix(in oklab, var(--color-accent) ${Math.round(v * 90)}%, var(--color-surface))`, color: v > 0.45 ? "var(--color-bg)" : "var(--color-ink-soft)" }}
                   >
                     {v.toFixed(2)}
                   </div>
