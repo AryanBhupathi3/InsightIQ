@@ -80,10 +80,10 @@ export default function PriceTab({ dataset, costPerUnit, dStarMonthly, priceResu
       <SectionLabel>Result</SectionLabel>
       <StatRow
         items={[
-          { label: "Optimal price", value: `$${priceResult.optimalPrice.toFixed(2)}`, tone: "accent" },
-          { label: "Closed-form p*", value: `$${priceResult.closedFormPrice.toFixed(2)}`, sub: "sanity check" },
-          { label: "Max profit", value: `$${priceResult.optimalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
-          { label: "Converged by", value: `${priceResult.convergedAt}`, sub: `of ${priceResult.priceHistory.length - 1} iters` },
+          { label: "Optimal price", numeric: priceResult.optimalPrice, format: (v) => `$${v.toFixed(2)}`, tone: "accent" },
+          { label: "Closed-form p*", numeric: priceResult.closedFormPrice, format: (v) => `$${v.toFixed(2)}`, sub: "sanity check" },
+          { label: "Max profit", numeric: priceResult.optimalProfit, format: (v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
+          { label: "Converged by", numeric: priceResult.convergedAt, format: (v) => `${v.toFixed(0)}`, sub: `of ${priceResult.priceHistory.length - 1} iters` },
         ]}
       />
     </div>

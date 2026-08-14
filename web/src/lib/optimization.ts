@@ -18,10 +18,18 @@
  *  should.
  *
  *  The budget is then checked against this (provably minimum-cost) plan:
- *  since x* already achieves the lowest possible cost for hitting D*
- *  exactly, if that cost still exceeds the budget, no reallocation can
- *  help — the configuration is genuinely infeasible, which Step 6 reports
- *  as a KKT/budget failure rather than silently forcing a worse answer. */
+ *  since x* already achieves the lowest possible cost for hitting the
+ *  target exactly, if that cost still exceeds the budget, no reallocation
+ *  can help — genuinely infeasible, which Step 6 reports as a KKT/budget
+ *  failure rather than silently forcing a worse answer.
+ *
+ *  D* itself can also exceed total supplier capacity — sum_i capacity_i.
+ *  When it does, "meet D* exactly" has no feasible solution at all, so
+ *  the equality constraint is solved for target = min(D*, total capacity)
+ *  instead, and the gap between target and D* is reported as `shortfall`
+ *  rather than papered over. The KKT check below verifies optimality of
+ *  *that* (achievable) plan — it does not, and should not, silently
+ *  pretend the original D* was met. */
 
 export interface SupplierSolution {
   groups: string[];
@@ -31,10 +39,12 @@ export interface SupplierSolution {
   capacity: number[];
   price: number[];
   gamma: number;
-  demand: number;
+  demand: number; // originally requested D*
+  target: number; // what the solver actually solved for: min(demand, total capacity)
+  shortfall: number; // demand - target, >= 0 — units D* asked for that no supplier can cover
   budget: number;
   lambda: number; // equality-constraint multiplier (water level)
-  feasible: boolean; // whether the min-cost plan fits inside budget
+  feasible: boolean; // budget-feasible AND no capacity shortfall
 }
 
 export function solveSupplierSelection(
@@ -47,6 +57,7 @@ export function solveSupplierSelection(
 ): SupplierSolution {
   const totalCapacity = capacity.reduce((a, b) => a + b, 0);
   const target = Math.min(demand, totalCapacity); // can't allocate past total capacity
+  const shortfall = Math.max(0, demand - target);
 
   const xAt = (tau: number) => price.map((p, i) => Math.min(Math.max((tau - p) / gamma, 0), capacity[i]));
 
@@ -73,9 +84,11 @@ export function solveSupplierSelection(
     price,
     gamma,
     demand,
+    target,
+    shortfall,
     budget,
     lambda: -tau,
-    feasible: totalCost <= budget && target >= demand - 1e-6,
+    feasible: totalCost <= budget && shortfall <= 1e-6,
   };
 }
 
@@ -90,11 +103,16 @@ export interface KktReport {
   dualFeasible: boolean;
   complementarySlacknessResidual: number;
   complementarySlacknessOk: boolean;
+  /** demand - target: what D* asked for that no supplier combination can
+   *  cover. This is a business-level shortfall, not a KKT failure — the
+   *  plan below can still be a provably optimal solution to the reduced
+   *  (achievable) target, which is what allOk actually certifies. */
+  shortfall: number;
   allOk: boolean;
 }
 
 export function kktReport(sol: SupplierSolution, tol = 1e-2): KktReport {
-  const { x, price, capacity, gamma, lambda, demand, budget, totalCost } = sol;
+  const { x, price, capacity, gamma, lambda, target, budget, totalCost, shortfall } = sol;
   const eps = Math.max(1e-6, Math.max(...capacity) * 1e-4);
   const priceScale = Math.max(1, ...price);
   const grad = x.map((xi, i) => price[i] + gamma * xi);
@@ -118,16 +136,26 @@ export function kktReport(sol: SupplierSolution, tol = 1e-2): KktReport {
   const upperBoundViolation = grad.map((g, i) => (atUpper[i] && !atLower[i] ? Math.max(0, g + lambda) : 0));
   const boundaryViolation = Math.max(0, ...lowerBoundViolation, ...upperBoundViolation);
 
-  const primalDemandGap = Math.abs(x.reduce((a, b) => a + b, 0) - demand);
+  // Checked against target (what the solver was actually asked to hit
+  // after capping for capacity), not the original D* — see SupplierSolution
+  // doc comment. A capacity shortfall is reported separately below, not
+  // folded into this residual.
+  const primalDemandGap = Math.abs(x.reduce((a, b) => a + b, 0) - target);
   const primalCapacityOk = x.every((xi, i) => xi <= capacity[i] + eps);
   const primalBudgetSlack = totalCost - budget;
   const slackness = mu.map((m, i) => m * (x[i] - capacity[i]));
   const complementarySlacknessResidual = Math.max(...slackness.map(Math.abs));
 
   const stationarityOk = stationarityResidual < tol * priceScale && boundaryViolation < tol * priceScale;
-  const primalDemandOk = primalDemandGap < tol * Math.max(1, demand);
+  const primalDemandOk = primalDemandGap < tol * Math.max(1, target);
   const primalBudgetOk = primalBudgetSlack < tol * Math.max(1, budget);
-  const dualFeasible = mu.every((m) => m <= tol * priceScale);
+  // mu_i >= 0 for an active upper-bound (capacity) constraint in a
+  // minimization — relaxing a binding cap on a supplier can only reduce
+  // cost, never increase it, and mu_i is exactly that shadow price. This
+  // was backwards (checked m <= tol) until a supplier actually sat at
+  // capacity exposed it — with capacity generous everywhere, mu was
+  // always 0 and the bug never fired.
+  const dualFeasible = mu.every((m) => m >= -tol * priceScale);
   const complementarySlacknessOk = complementarySlacknessResidual < tol * Math.max(1, ...capacity);
 
   return {
@@ -141,6 +169,11 @@ export function kktReport(sol: SupplierSolution, tol = 1e-2): KktReport {
     dualFeasible,
     complementarySlacknessResidual,
     complementarySlacknessOk,
+    shortfall,
+    // Deliberately does not include a shortfall check: allOk certifies
+    // the plan is optimal for what it solved (the target), which is a
+    // true statement even when target < D*. The shortfall itself is
+    // surfaced separately so it's never mistaken for a KKT failure.
     allOk: stationarityOk && primalDemandOk && primalCapacityOk && primalBudgetOk && dualFeasible && complementarySlacknessOk,
   };
 }

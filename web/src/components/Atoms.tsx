@@ -1,17 +1,31 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import AnimatedNumber from "./AnimatedNumber";
 
-export function Stat({ label, value, sub, tone = "ink" }: { label: string; value: string; sub?: string; tone?: "ink" | "accent" }) {
+export interface StatItem {
+  label: string;
+  /** Static text (supplier names, "6 of 10") — rendered as-is, no animation. */
+  value?: string;
+  /** A real number — rendered as a count-up tween instead of a snap-in. */
+  numeric?: number;
+  format?: (v: number) => string;
+  sub?: string;
+  tone?: "ink" | "accent";
+}
+
+export function Stat({ label, value, numeric, format, sub, tone = "ink" }: StatItem) {
   return (
     <div>
       <div className="font-mono text-[0.65rem] tracking-wider uppercase text-ink-muted">{label}</div>
-      <div className={`text-[1.7rem] font-bold tracking-[-0.02em] tabular ${tone === "accent" ? "text-accent" : "text-ink"}`}>{value}</div>
+      <div className={`text-[1.7rem] font-bold tracking-[-0.02em] tabular ${tone === "accent" ? "text-accent" : "text-ink"}`}>
+        {numeric !== undefined ? <AnimatedNumber value={numeric} format={format} /> : value}
+      </div>
       {sub && <div className="text-[0.72rem] text-ink-muted mt-0.5">{sub}</div>}
     </div>
   );
 }
 
-export function StatRow({ items }: { items: { label: string; value: string; sub?: string; tone?: "ink" | "accent" }[] }) {
+export function StatRow({ items }: { items: StatItem[] }) {
   return (
     <div className="flex flex-wrap gap-x-8 gap-y-4">
       {items.map((it) => (
@@ -99,7 +113,6 @@ export function LockedPanel({ label }: { label: string }) {
           background:
             "linear-gradient(135deg, color-mix(in oklab, var(--color-surface) 75%, transparent), color-mix(in oklab, var(--color-surface-raised) 60%, transparent))",
           backdropFilter: "blur(28px) saturate(160%)",
-          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           border: "1px solid var(--color-border-strong)",
         }}
       />

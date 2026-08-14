@@ -106,9 +106,9 @@ export default function UncertaintyTab({ dataset, markov, nStep, currentState, h
       <StatRow
         items={[
           { label: "Current state", value: STATES[currentState], tone: "accent" },
-          { label: "Low/Medium boundary", value: markov.thresholds[0].toFixed(1) },
-          { label: "Medium/High boundary", value: markov.thresholds[1].toFixed(1) },
-          { label: `P(High, ${Math.min(horizon, 30)} steps)`, value: `${(nStep[2] * 100).toFixed(0)}%` },
+          { label: "Low/Medium boundary", numeric: markov.thresholds[0], format: (v) => v.toFixed(1) },
+          { label: "Medium/High boundary", numeric: markov.thresholds[1], format: (v) => v.toFixed(1) },
+          { label: `P(High, ${Math.min(horizon, 30)} steps)`, numeric: nStep[2] * 100, format: (v) => `${v.toFixed(0)}%` },
         ]}
       />
     </div>

@@ -96,17 +96,52 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-const TAB_WIDTH = 108; // px — fixed so the clip-path indicator math is exact, no measurement needed
+// Same 6 tabs, clustered by the 4 pipeline stages — a locked tab still
+// sits inside its stage's cluster (Price stays next to Supplier), it's
+// just visually grouped rather than floating in a flat row.
+const STAGE_GROUPS: TabKey[][] = [
+  ["data"],
+  ["forecast", "uncertainty"],
+  ["supplier", "price"],
+  ["decision"],
+];
+
+const TAB_WIDTH = 108; // px — fixed so the indicator math is exact, no measurement needed
+const GROUP_GAP = 14; // px between stage clusters
+
+// Precomputed once: each tab's pixel offset within the bar, accounting
+// for the gaps between clusters (a plain index*TAB_WIDTH breaks once the
+// tabs aren't evenly spaced).
+const TAB_LAYOUT: Record<TabKey, number> = (() => {
+  const layout = {} as Record<TabKey, number>;
+  let x = 0;
+  STAGE_GROUPS.forEach((group, gi) => {
+    if (gi > 0) x += GROUP_GAP;
+    group.forEach((key) => {
+      layout[key] = x;
+      x += TAB_WIDTH;
+    });
+  });
+  return layout;
+})();
+const BAR_WIDTH = Math.max(...Object.values(TAB_LAYOUT)) + TAB_WIDTH;
 
 export default function Workbench() {
   const [tab, setTab] = useState<TabKey>("data");
   const [shakingKey, setShakingKey] = useState<TabKey | null>(null);
   const shared = { ...useWorkbenchState(), goToData: () => setTab("data") };
 
-  const activeIndex = TABS.findIndex((t) => t.key === tab);
-  const n = TABS.length;
-  const leftPct = (activeIndex / n) * 100;
-  const rightPct = ((n - 1 - activeIndex) / n) * 100;
+  // Per-tab readiness — a quiet progress signal, not a gate: whether that
+  // stage has actually produced output yet, so the bar doubles as a
+  // pipeline status view instead of just navigation.
+  const READY: Partial<Record<TabKey, boolean>> = {
+    data: !!shared.dataset && !!shared.constraints,
+    forecast: !!shared.wls && !!shared.forecast,
+    uncertainty: !!shared.markov && !!shared.nStep,
+    supplier: !!shared.supplierSolution && !!shared.kkt,
+  };
+
+  const left = TAB_LAYOUT[tab];
 
   const handleTabClick = (key: TabKey) => {
     if (LOCKED_TABS.includes(key)) {
@@ -127,46 +162,90 @@ export default function Workbench() {
             <span className="font-semibold text-[0.9rem]">InsightIQ</span>
           </Link>
 
-          <div className="relative" style={{ width: TAB_WIDTH * n }}>
-            {/* base layer: all labels, muted/locked styling */}
+          {/* narrow viewports: the pixel-clustered bar above doesn't fit, so a
+              native select stands in — grouped the same way, locked stages
+              just disabled (a native <option disabled> is its own "no" feedback,
+              no shake needed) */}
+          <select
+            value={tab}
+            onChange={(e) => handleTabClick(e.target.value as TabKey)}
+            className="sm:hidden bg-surface-raised border border-border-strong rounded-lg px-3 py-2 text-[0.82rem] text-ink"
+          >
+            {STAGE_GROUPS.map((group, gi) => (
+              <optgroup key={gi} label={`Stage ${gi + 1}`}>
+                {group.map((key) => {
+                  const t = TABS.find((x) => x.key === key)!;
+                  const locked = LOCKED_TABS.includes(key);
+                  return (
+                    <option key={key} value={key} disabled={locked}>
+                      {t.label}{locked ? " (locked)" : READY[key] ? " ✓" : ""}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            ))}
+          </select>
+
+          <div className="relative hidden sm:block" style={{ width: BAR_WIDTH }}>
+            {/* base layer: all labels, clustered by stage, muted/locked/ready styling */}
             <div className="relative flex">
-              {TABS.map((t) => {
-                const locked = LOCKED_TABS.includes(t.key);
-                return (
-                  <button
-                    key={t.key}
-                    onClick={() => handleTabClick(t.key)}
-                    aria-disabled={locked}
-                    style={{ width: TAB_WIDTH }}
-                    className={`pressable flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg ${
-                      locked
-                        ? `cursor-not-allowed text-ink-faint ${shakingKey === t.key ? "shake" : ""}`
-                        : "cursor-pointer text-ink-muted hover:text-ink-soft"
-                    }`}
-                  >
-                    {locked && <LockIcon className="w-3 h-3 flex-shrink-0" />}
-                    {t.label}
-                  </button>
-                );
-              })}
+              {STAGE_GROUPS.map((group, gi) => (
+                <div key={gi} className="flex" style={{ marginLeft: gi > 0 ? GROUP_GAP : 0 }}>
+                  {group.map((key) => {
+                    const t = TABS.find((x) => x.key === key)!;
+                    const locked = LOCKED_TABS.includes(key);
+                    const ready = READY[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleTabClick(key)}
+                        aria-disabled={locked}
+                        style={{ width: TAB_WIDTH }}
+                        className={`pressable flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg ${
+                          locked
+                            ? `cursor-not-allowed text-ink-faint ${shakingKey === key ? "shake" : ""}`
+                            : "cursor-pointer text-ink-muted hover:text-ink-soft"
+                        }`}
+                      >
+                        {locked ? (
+                          <LockIcon className="w-3 h-3 flex-shrink-0" />
+                        ) : (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={ready ? { background: "var(--color-good)", boxShadow: "0 0 6px -1px var(--color-good)" } : { background: "var(--color-border-strong)" }}
+                          />
+                        )}
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
 
-            {/* active copy: identical layout, active styling, revealed only over the active tab */}
+            {/* active copy: identical clustered layout, active styling, revealed only over the active tab */}
             <div
               className="absolute inset-0 flex pointer-events-none"
               style={{
-                clipPath: `inset(0 ${rightPct}% 0 ${leftPct}%)`,
+                clipPath: `inset(0 ${BAR_WIDTH - left - TAB_WIDTH}px 0 ${left}px)`,
                 transition: "clip-path 250ms var(--ease-in-out)",
               }}
             >
-              {TABS.map((t) => (
-                <div
-                  key={t.key}
-                  style={{ width: TAB_WIDTH }}
-                  className="flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg bg-surface-raised text-ink"
-                >
-                  {LOCKED_TABS.includes(t.key) && <LockIcon className="w-3 h-3 flex-shrink-0" />}
-                  {t.label}
+              {STAGE_GROUPS.map((group, gi) => (
+                <div key={gi} className="flex" style={{ marginLeft: gi > 0 ? GROUP_GAP : 0 }}>
+                  {group.map((key) => {
+                    const t = TABS.find((x) => x.key === key)!;
+                    return (
+                      <div
+                        key={key}
+                        style={{ width: TAB_WIDTH }}
+                        className="flex items-center justify-center gap-1.5 text-[0.82rem] font-medium py-1.5 rounded-lg bg-surface-raised text-ink"
+                      >
+                        {LOCKED_TABS.includes(key) && <LockIcon className="w-3 h-3 flex-shrink-0" />}
+                        {t.label}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>

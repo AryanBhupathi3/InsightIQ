@@ -4,6 +4,7 @@ import { useDataset } from "../state/DatasetContext";
 import { SAMPLE_DATASETS } from "../lib/sampleDatasets";
 import type { ColumnMapping } from "../lib/types";
 import ProcessingSteps from "./ProcessingSteps";
+import DataPreviewTable from "./DataPreviewTable";
 
 const ROLES: { key: keyof ColumnMapping; label: string; required: boolean; hint: string }[] = [
   { key: "demand", label: "Demand / quantity", required: true, hint: "what gets forecast" },
@@ -73,6 +74,8 @@ export default function UploadPanel() {
       {error && <div className="text-[0.82rem] text-critical">{error}</div>}
 
       {dataset && <ProcessingSteps />}
+
+      {dataset && <DataPreviewTable />}
 
       {dataset && (
         <div>

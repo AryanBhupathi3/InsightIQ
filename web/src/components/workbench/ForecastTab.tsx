@@ -68,10 +68,10 @@ export default function ForecastTab({ dataset, series, wls, forecast, horizon, s
       <SectionLabel>Result</SectionLabel>
       <StatRow
         items={[
-          { label: "D* end of horizon", value: dStarDaily!.toFixed(1), sub: "per period", tone: "accent" },
-          { label: "Avg over horizon", value: (forecast.point.reduce((a, b) => a + b, 0) / forecast.point.length).toFixed(1) },
-          { label: "Trend slope β₁", value: wls.slope.toFixed(3) },
-          { label: "Residual σ", value: wls.residualStd.toFixed(2) },
+          { label: "D* end of horizon", numeric: dStarDaily!, format: (v) => v.toFixed(1), sub: "per period", tone: "accent" },
+          { label: "Avg over horizon", numeric: forecast.point.reduce((a, b) => a + b, 0) / forecast.point.length, format: (v) => v.toFixed(1) },
+          { label: "Trend slope β₁", numeric: wls.slope, format: (v) => v.toFixed(3) },
+          { label: "Residual σ", numeric: wls.residualStd, format: (v) => v.toFixed(2) },
         ]}
       />
     </div>

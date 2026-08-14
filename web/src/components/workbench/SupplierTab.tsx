@@ -67,30 +67,52 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
       </div>
 
       <SectionLabel>Allocation</SectionLabel>
+      {supplierSolution.shortfall > 1e-6 && (
+        <div className="mb-4">
+          <Chip
+            tone="warning"
+            label={`Capacity-constrained — sourcing ${Math.round(supplierSolution.target).toLocaleString()} of ${Math.round(supplierSolution.demand).toLocaleString()} units requested (${Math.round(supplierSolution.shortfall).toLocaleString()} short)`}
+          />
+        </div>
+      )}
       <StatRow
         items={[
-          { label: "Total cost", value: `$${supplierSolution.totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, tone: "accent" },
+          { label: "Demand met", numeric: supplierSolution.target, format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `of ${supplierSolution.demand.toLocaleString(undefined, { maximumFractionDigits: 0 })} requested`, tone: supplierSolution.shortfall > 1e-6 ? "ink" : "accent" },
+          { label: "Total cost", numeric: supplierSolution.totalCost, format: (v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, tone: "accent" },
           { label: "Suppliers used", value: `${supplierSolution.x.filter((v) => v > 1e-3).length} / ${groups.length}` },
-          { label: "Avg cost/unit", value: `$${(supplierSolution.totalCost / Math.max(supplierSolution.x.reduce((a, b) => a + b, 0), 1)).toFixed(2)}` },
-          { label: "Budget", value: `$${budget.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
+          { label: "Avg cost/unit", numeric: supplierSolution.totalCost / Math.max(supplierSolution.x.reduce((a, b) => a + b, 0), 1), format: (v) => `$${v.toFixed(2)}` },
+          { label: "Budget", numeric: budget, format: (v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
         ]}
       />
 
       <SectionLabel>KKT optimality check</SectionLabel>
+      <p className="text-[0.82rem] text-ink-muted mb-3 max-w-xl">
+        Certifies the allocation above is optimal for the {supplierSolution.shortfall > 1e-6 ? "achievable" : "requested"} target
+        {" "}({Math.round(supplierSolution.target).toLocaleString()} units) — a capacity shortfall, if any, is a business
+        constraint reported above, not a KKT failure.
+      </p>
       <FormulaBlock
         label="Lagrangian"
         tex="\mathcal{L}=\sum_i c_i(x_i)+\lambda\Big(\sum_i x_i-D^\star\Big)+\sum_i\mu_i(x_i-\text{cap}_i)"
       />
       <div className="mt-2">
         <StatusRow ok={kkt.stationarityOk} label="Stationarity" detail={`|∇L| = ${kkt.stationarityResidual.toExponential(2)}`} />
-        <StatusRow ok={kkt.primalDemandOk && kkt.primalCapacityOk} label="Primal feasibility" detail={`demand gap ${kkt.primalDemandGap.toExponential(2)}`} />
+        <StatusRow ok={kkt.primalDemandOk && kkt.primalCapacityOk} label="Primal feasibility" detail={`target gap ${kkt.primalDemandGap.toExponential(2)}`} />
         <StatusRow ok={kkt.primalBudgetOk} label="Budget feasibility" detail={`slack $${(-kkt.primalBudgetSlack).toFixed(0)}`} />
         <StatusRow ok={kkt.complementarySlacknessOk} label="Complementary slackness" detail={kkt.complementarySlacknessResidual.toExponential(2)} />
       </div>
       <div className="mt-3">
         <Chip
           tone={kkt.allOk ? "good" : "warning"}
-          label={kkt.allOk ? "Optimal — proceed to Step 7" : "Infeasible at this budget — raise headroom or lower γ"}
+          label={
+            kkt.allOk
+              ? supplierSolution.shortfall > 1e-6
+                ? "Optimal for the achievable target — proceed to Step 7"
+                : "Optimal — proceed to Step 7"
+              : !kkt.primalBudgetOk
+              ? "Infeasible at this budget — raise headroom or lower γ"
+              : "KKT check failed — see conditions above"
+          }
         />
       </div>
     </div>
