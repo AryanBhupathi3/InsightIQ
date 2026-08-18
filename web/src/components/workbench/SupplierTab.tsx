@@ -13,6 +13,10 @@ const units = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits
 // Held back for this review — flip to true (or remove the guard) to bring
 // the KKT optimality proof back for a later presentation.
 const SHOW_KKT_PROOF = false;
+// Same idea — the budget headroom slider stays wired up (budgetMult still
+// drives the budget calculation at its current/default value), just not
+// exposed as a control until the next review.
+const SHOW_BUDGET_HEADROOM = false;
 
 export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt, goToData }: WorkbenchShared) {
   if (groups.length === 0) {
@@ -47,8 +51,8 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
             Sourcing <AnimatedNumber value={supplierSolution.target} format={units} /> units at the lowest
             possible cost comes to <AnimatedNumber value={supplierSolution.totalCost} format={money} />
             {" "}— <AnimatedNumber value={budgetGap} format={money} /> more than your{" "}
-            <AnimatedNumber value={budget} format={money} /> budget. Raise the budget headroom, or lower the
-            rush-order penalty, to bring it back in range.
+            <AnimatedNumber value={budget} format={money} /> budget. Raising the available budget, or lowering the
+            rush-order penalty, would bring it back in range.
           </>
         ),
         how: `InsightIQ found the cheapest possible way to source ${units(supplierSolution.target)} units — ${money(supplierSolution.totalCost)} — and confirmed no other allocation could do it for less. That floor still sits above the ${money(budget)} budget, so no allocation of this demand can fit it as configured.`,
@@ -114,12 +118,14 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
             </div>
             <input type="range" min={0} max={0.02} step={0.001} value={gamma} onChange={(e) => setGamma(+e.target.value)} className="w-full accent-accent" />
           </label>
-          <label className="block">
-            <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
-              <span>Budget headroom (× min cost)</span><span className="tabular">{budgetMult.toFixed(1)}×</span>
-            </div>
-            <input type="range" min={1} max={3} step={0.1} value={budgetMult} onChange={(e) => setBudgetMult(+e.target.value)} className="w-full accent-accent" />
-          </label>
+          {SHOW_BUDGET_HEADROOM && (
+            <label className="block">
+              <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
+                <span>Budget headroom (× min cost)</span><span className="tabular">{budgetMult.toFixed(1)}×</span>
+              </div>
+              <input type="range" min={1} max={3} step={0.1} value={budgetMult} onChange={(e) => setBudgetMult(+e.target.value)} className="w-full accent-accent" />
+            </label>
+          )}
         </div>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
