@@ -1,6 +1,7 @@
 import type { WorkbenchShared } from "../../pages/Workbench";
 import UploadPanel from "../UploadPanel";
 import { SectionLabel, Callout } from "../Atoms";
+import Disclosure from "../Disclosure";
 import FormulaBlock from "../FormulaBlock";
 import { recencyWeights } from "../../lib/stats";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -41,11 +42,11 @@ export default function DataTab({ dataset, constraints, series, halflife, setHal
             <div>
               <p className="text-[0.85rem] text-ink-soft leading-relaxed mb-4">
                 Rows are aggregated to one point per period (summed if several rows share a
-                date), and each period gets an exponential recency weight so the forecast in
-                the next stage trusts recent demand more than old demand.
+                date), and each period is weighted by how recent it is — the slider below controls
+                how quickly that weight fades, so you can decide how much recent demand should
+                outweigh old demand in the forecast.
               </p>
-              <FormulaBlock label="Recency weight, half-life h" tex="w_t = 0.5^{\frac{T - t}{h}}" />
-              <label className="block mt-4">
+              <label className="block">
                 <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
                   <span>Half-life (days)</span><span className="tabular">{halflife}</span>
                 </div>
@@ -68,6 +69,12 @@ export default function DataTab({ dataset, constraints, series, halflife, setHal
                 <Callout>Map a demand/quantity column above to preview its series.</Callout>
               )}
             </div>
+          </div>
+
+          <div className="mt-6">
+            <Disclosure label="How does the recency weighting work?">
+              <FormulaBlock label="Recency weight, half-life h" tex="w_t = 0.5^{\frac{T - t}{h}}" />
+            </Disclosure>
           </div>
         </>
       )}

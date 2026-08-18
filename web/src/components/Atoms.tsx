@@ -94,6 +94,31 @@ export function Callout({ children }: { children: ReactNode }) {
   );
 }
 
+const VERDICT_TONE = {
+  good: { border: "border-l-good", dot: "bg-good shadow-[0_0_8px_-1px_var(--color-good)]" },
+  warning: { border: "border-l-warning", dot: "bg-warning shadow-[0_0_8px_-1px_var(--color-warning)]" },
+  critical: { border: "border-l-critical", dot: "bg-critical shadow-[0_0_8px_-1px_var(--color-critical)]" },
+  // Purely informational read (no pass/fail), for tabs like Forecast/Uncertainty
+  // that describe a situation rather than certify an outcome.
+  info: { border: "border-l-accent", dot: "bg-accent shadow-[0_0_8px_-1px_var(--color-accent-ring)]" },
+} as const;
+
+/** The plain-language answer, first — every math-heavy tab leads with one
+ *  of these before any formula, so "what should I do and why" doesn't
+ *  require reading a proof to find out. */
+export function VerdictPanel({ tone, headline, children }: { tone: keyof typeof VERDICT_TONE; headline: string; children: ReactNode }) {
+  const t = VERDICT_TONE[tone];
+  return (
+    <div className={`glass rounded-2xl p-6 border-l-[3px] ${t.border} mb-8`}>
+      <div className="flex items-center gap-2.5 mb-2.5">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.dot}`} />
+        <div className="text-[1.15rem] font-semibold tracking-[-0.01em]">{headline}</div>
+      </div>
+      <p className="text-[0.9rem] text-ink-soft leading-relaxed max-w-2xl">{children}</p>
+    </div>
+  );
+}
+
 export function LockIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden="true">
