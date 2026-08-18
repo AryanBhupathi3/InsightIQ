@@ -9,7 +9,7 @@ import ThemeToggle from "../components/ThemeToggle";
 const STEPS: { step: 1 | 2 | 3 | 4; title: string; desc: string }[] = [
   { step: 1, title: "Data layer", desc: "Upload any CSV — sales, procurement, inventory. Columns map to roles; constraints derive from what's actually there." },
   { step: 2, title: "Demand forecast", desc: "Weighted Least Squares fits a recency-weighted trend; a Markov chain models the uncertainty around it." },
-  { step: 3, title: "Supplier selection", desc: "A convex program allocates volume across suppliers — solved exactly via water-filling, verified via KKT." },
+  { step: 3, title: "Supplier selection", desc: "A convex program allocates volume across suppliers — solved exactly via water-filling, mathematically proven optimal." },
   { step: 4, title: "Price optimization", desc: "Gradient ascent climbs the profit function to the price that maximizes it, checked against a closed form." },
 ];
 
@@ -50,9 +50,9 @@ export default function Home() {
           <Reveal delay={0.12}>
             <p className="font-mono text-[0.92rem] text-ink-soft leading-relaxed max-w-lg mb-8">
               Upload your own sales or procurement data. InsightIQ forecasts demand, allocates
-              volume across suppliers as a convex program, proves that allocation optimal via
-              KKT, and climbs to the profit-maximizing price — live, in your browser, on your
-              numbers. Nothing here is hardcoded to one dataset.
+              volume across suppliers as a convex program, proves that allocation is
+              mathematically optimal, and climbs to the profit-maximizing price — live, in your
+              browser, on your numbers. Nothing here is hardcoded to one dataset.
             </p>
           </Reveal>
           <Reveal delay={0.18}>
