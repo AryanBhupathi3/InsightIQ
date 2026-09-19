@@ -17,9 +17,7 @@ import SupplierTab from "../components/workbench/SupplierTab";
 import PriceTab from "../components/workbench/PriceTab";
 import DecisionTab from "../components/workbench/DecisionTab";
 
-// Held back for the project review presentation — flip to [] (or remove
-// entries) when it's time to reveal these stages.
-const LOCKED_TABS: TabKey[] = ["price", "decision"];
+const LOCKED_TABS: TabKey[] = [];
 
 export type WorkbenchShared = ReturnType<typeof useWorkbenchState> & { goToData: () => void };
 
@@ -141,6 +139,8 @@ export default function Workbench() {
     forecast: !!shared.wls && !!shared.forecast,
     uncertainty: !!shared.markov && !!shared.nStep,
     supplier: !!shared.supplierSolution && !!shared.kkt,
+    price: !!shared.supplierSolution && !!shared.priceResult,
+    decision: !!shared.supplierSolution && !!shared.kkt && !!shared.priceResult,
   };
 
   const left = TAB_LAYOUT[tab];
