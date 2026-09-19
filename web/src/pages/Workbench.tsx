@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDataset } from "../state/DatasetContext";
 import { buildSeries, entityValues } from "../lib/series";
-import { fitWls, forecastHorizon } from "../lib/stats";
+import { fitWls, forecastHorizon, forecastFromRegimes } from "../lib/stats";
 import { fitMarkov, nStepDistribution } from "../lib/markov";
 import { solveSupplierSelection, kktReport } from "../lib/optimization";
 import { gradientAscent } from "../lib/pricing";
@@ -41,14 +41,25 @@ function useWorkbenchState() {
   );
 
   const wls = useMemo(() => (series && series.y.length > 2 ? fitWls(series.t, series.y, halflife) : null), [series, halflife]);
-  const forecast = useMemo(
+  // Straight-line baseline only — drawn faintly on the Forecast chart for
+  // comparison. Nothing downstream reads it.
+  const wlsBaseline = useMemo(
     () => (wls && series ? forecastHorizon(wls, series.t[series.t.length - 1], horizon) : null),
     [wls, series, horizon]
   );
-  const dStarDaily = forecast ? forecast.point[forecast.point.length - 1] : null;
-  const dStarMonthly = dStarDaily ? Math.max(Math.round(dStarDaily * 30), 1) : null;
 
   const markov = useMemo(() => (series && series.y.length > 5 ? fitMarkov(series.y) : null), [series]);
+
+  // The actual forecast: a distribution per period, conditioned on the Markov
+  // regime the series is currently in.
+  const forecast = useMemo(
+    () => (series && markov ? forecastFromRegimes(series.y, markov.stateSeq, horizon) : null),
+    [series, markov, horizon]
+  );
+  // Downstream (Supplier/Price/Decision) still needs one representative number
+  // per period — the median of the forecast distribution at the horizon's end.
+  const dStarDaily = forecast ? forecast.median[forecast.median.length - 1] : null;
+  const dStarMonthly = dStarDaily ? Math.max(Math.round(dStarDaily * 30), 1) : null;
   const currentState = markov ? markov.stateSeq[markov.stateSeq.length - 1] : null;
   const nStep = useMemo(
     () => (markov && currentState !== null ? nStepDistribution(markov.transitionMatrix, currentState, Math.min(horizon, 30)) : null),
@@ -79,7 +90,7 @@ function useWorkbenchState() {
   return {
     dataset, mapping, constraints, entities, activeEntity, setEntity,
     horizon, setHorizon, halflife, setHalflife,
-    series, wls, forecast, dStarDaily, dStarMonthly,
+    series, wls, wlsBaseline, forecast, dStarDaily, dStarMonthly,
     markov, currentState, nStep,
     groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt,
     epsilon, setEpsilon, lr, setLr, costPerUnit, priceResult,
@@ -136,7 +147,7 @@ export default function Workbench() {
   // pipeline status view instead of just navigation.
   const READY: Partial<Record<TabKey, boolean>> = {
     data: !!shared.dataset && !!shared.constraints,
-    forecast: !!shared.wls && !!shared.forecast,
+    forecast: !!shared.forecast,
     uncertainty: !!shared.markov && !!shared.nStep,
     supplier: !!shared.supplierSolution && !!shared.kkt,
     price: !!shared.supplierSolution && !!shared.priceResult,
