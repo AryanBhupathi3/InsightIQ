@@ -30,7 +30,7 @@ export default function DecisionTab({ dataset, dStarDaily, supplierSolution, kkt
       <h1 className="font-display italic text-[2.5rem] leading-[1.02] tracking-[-0.02em] mb-3">Decision engine</h1>
       <p className="text-[0.9rem] text-ink-muted max-w-xl mb-6">
         {activeEntity ? `For ${activeEntity}, over` : "Over"} the next {horizon} days: forecast, sourcing, price
-        and a mathematically verified allocation, merged into one recommendation.
+        and a KKT-verified proof, merged into one recommendation.
       </p>
 
       <div className="grid sm:grid-cols-4 gap-4 mb-8">
@@ -59,7 +59,7 @@ export default function DecisionTab({ dataset, dStarDaily, supplierSolution, kkt
         </div>
         <div className="glass rounded-2xl p-4">
           <div className="font-mono text-[0.62rem] uppercase text-ink-muted mb-1">Justification</div>
-          <Chip tone={kkt.allOk ? "good" : "warning"} label={kkt.allOk ? "Mathematically verified" : "not verified"} />
+          <Chip tone={kkt.allOk ? "good" : "warning"} label={kkt.allOk ? "KKT verified" : "not verified"} />
         </div>
       </div>
 

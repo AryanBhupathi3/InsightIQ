@@ -10,14 +10,6 @@ const SERIES = ["var(--color-series-1)", "var(--color-series-2)", "var(--color-s
 const money = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const units = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-// Held back for this review — flip to true (or remove the guard) to bring
-// the KKT optimality proof back for a later presentation.
-const SHOW_KKT_PROOF = false;
-// Same idea — the budget headroom slider stays wired up (budgetMult still
-// drives the budget calculation at its current/default value), just not
-// exposed as a control until the next review.
-const SHOW_BUDGET_HEADROOM = false;
-
 export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt, goToData }: WorkbenchShared) {
   if (groups.length === 0) {
     return (
@@ -118,14 +110,12 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
             </div>
             <input type="range" min={0} max={0.02} step={0.001} value={gamma} onChange={(e) => setGamma(+e.target.value)} className="w-full accent-accent" />
           </label>
-          {SHOW_BUDGET_HEADROOM && (
-            <label className="block">
-              <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
-                <span>Budget headroom (× min cost)</span><span className="tabular">{budgetMult.toFixed(1)}×</span>
-              </div>
-              <input type="range" min={1} max={3} step={0.1} value={budgetMult} onChange={(e) => setBudgetMult(+e.target.value)} className="w-full accent-accent" />
-            </label>
-          )}
+          <label className="block">
+            <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
+              <span>Budget headroom (× min cost)</span><span className="tabular">{budgetMult.toFixed(1)}×</span>
+            </div>
+            <input type="range" min={1} max={3} step={0.1} value={budgetMult} onChange={(e) => setBudgetMult(+e.target.value)} className="w-full accent-accent" />
+          </label>
         </div>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
@@ -157,39 +147,37 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
           />
         </div>
 
-        {SHOW_KKT_PROOF && (
-          <Disclosure label="Mathematical verification" nested>
-            <p className="text-[0.8rem] text-ink-muted leading-relaxed max-w-xl mb-3">
-              Four independent checks that together certify the allocation above is optimal for the{" "}
-              {hasShortfall ? "achievable" : "requested"} target ({units(supplierSolution.target)} units) — a
-              capacity shortfall, if any, is a business constraint reported above, not a failure of this proof.
-            </p>
-            <FormulaBlock
-              label="Lagrangian"
-              tex="\mathcal{L}=\sum_i c_i(x_i)+\lambda\Big(\sum_i x_i-D^\star\Big)+\sum_i\mu_i(x_i-\text{cap}_i)"
+        <Disclosure label="Mathematical verification — KKT conditions" nested>
+          <p className="text-[0.8rem] text-ink-muted leading-relaxed max-w-xl mb-3">
+            Four independent checks that together certify the allocation above is optimal for the{" "}
+            {hasShortfall ? "achievable" : "requested"} target ({units(supplierSolution.target)} units) — a
+            capacity shortfall, if any, is a business constraint reported above, not a failure of this proof.
+          </p>
+          <FormulaBlock
+            label="Lagrangian"
+            tex="\mathcal{L}=\sum_i c_i(x_i)+\lambda\Big(\sum_i x_i-D^\star\Big)+\sum_i\mu_i(x_i-\text{cap}_i)"
+          />
+          <div className="mt-2">
+            <StatusRow ok={kkt.stationarityOk} label="Stationarity" detail={`|∇L| = ${kkt.stationarityResidual.toExponential(2)}`} />
+            <StatusRow ok={kkt.primalDemandOk && kkt.primalCapacityOk} label="Primal feasibility" detail={`target gap ${kkt.primalDemandGap.toExponential(2)}`} />
+            <StatusRow ok={kkt.primalBudgetOk} label="Budget feasibility" detail={`slack $${(-kkt.primalBudgetSlack).toFixed(0)}`} />
+            <StatusRow ok={kkt.complementarySlacknessOk} label="Complementary slackness" detail={kkt.complementarySlacknessResidual.toExponential(2)} />
+          </div>
+          <div className="mt-3">
+            <Chip
+              tone={kkt.allOk ? "good" : "warning"}
+              label={
+                kkt.allOk
+                  ? hasShortfall
+                    ? "Optimal for the achievable target — proceed to Step 7"
+                    : "Optimal — proceed to Step 7"
+                  : overBudget
+                  ? "Infeasible at this budget — raise headroom or lower γ"
+                  : "KKT check failed — see conditions above"
+              }
             />
-            <div className="mt-2">
-              <StatusRow ok={kkt.stationarityOk} label="Stationarity" detail={`|∇L| = ${kkt.stationarityResidual.toExponential(2)}`} />
-              <StatusRow ok={kkt.primalDemandOk && kkt.primalCapacityOk} label="Primal feasibility" detail={`target gap ${kkt.primalDemandGap.toExponential(2)}`} />
-              <StatusRow ok={kkt.primalBudgetOk} label="Budget feasibility" detail={`slack $${(-kkt.primalBudgetSlack).toFixed(0)}`} />
-              <StatusRow ok={kkt.complementarySlacknessOk} label="Complementary slackness" detail={kkt.complementarySlacknessResidual.toExponential(2)} />
-            </div>
-            <div className="mt-3">
-              <Chip
-                tone={kkt.allOk ? "good" : "warning"}
-                label={
-                  kkt.allOk
-                    ? hasShortfall
-                      ? "Optimal for the achievable target — proceed to Step 7"
-                      : "Optimal — proceed to Step 7"
-                    : overBudget
-                    ? "Infeasible at this budget — raise headroom or lower γ"
-                    : "Verification failed — see conditions above"
-                }
-              />
-            </div>
-          </Disclosure>
-        )}
+          </div>
+        </Disclosure>
       </Disclosure>
     </div>
   );
