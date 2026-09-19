@@ -108,7 +108,10 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
             <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
               <span>Rush-order penalty γ</span><span className="tabular">{gamma.toFixed(3)}</span>
             </div>
-            <input type="range" min={0} max={0.02} step={0.001} value={gamma} onChange={(e) => setGamma(+e.target.value)} className="w-full accent-accent" />
+            {/* Floor is 0.001, not 0: the water-filling solve divides by gamma,
+                so gamma=0 degenerates to a divide-by-zero and NaNs the whole
+                downstream pipeline. */}
+            <input type="range" min={0.001} max={0.02} step={0.001} value={gamma} onChange={(e) => setGamma(+e.target.value)} className="w-full accent-accent" />
           </label>
           <label className="block">
             <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
