@@ -8,7 +8,7 @@ import ThemeToggle from "../components/ThemeToggle";
 
 const STEPS: { step: 1 | 2 | 3 | 4; title: string; desc: string }[] = [
   { step: 1, title: "Data layer", desc: "Upload any CSV — sales, procurement, inventory. Columns map to roles; constraints derive from what's actually there." },
-  { step: 2, title: "Demand forecast", desc: "Weighted Least Squares fits a recency-weighted trend; a Markov chain models the uncertainty around it." },
+  { step: 2, title: "Demand forecast", desc: "A Markov chain sorts demand into Low/Medium/High bands and forecasts from what actually happened next, every other time it was in today's band." },
   { step: 3, title: "Supplier selection", desc: "A convex program allocates volume across suppliers — solved exactly via water-filling, verified via KKT." },
   { step: 4, title: "Price optimization", desc: "Gradient ascent climbs the profit function to the price that maximizes it, checked against a closed form." },
 ];

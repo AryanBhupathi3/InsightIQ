@@ -42,7 +42,14 @@ export default function BuyerWorkbench() {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-10 px-4 pt-4">
+      {/* The px-4 pt-4 gap above the card is padding, not margin, so it needs
+          its own background — without one, whatever scrolls underneath shows
+          through the top strip of the viewport instead of being hidden
+          behind the "floating" header. */}
+      <div
+        className="sticky top-0 z-10 px-4 pt-4"
+        style={{ background: "color-mix(in oklab, var(--color-surface) 55%, transparent)", backdropFilter: "blur(20px) saturate(160%)" }}
+      >
         <div className="max-w-6xl mx-auto glass rounded-2xl">
           <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link to="/" className="pressable flex items-center gap-2">
