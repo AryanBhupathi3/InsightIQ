@@ -23,10 +23,30 @@ export interface FunnelResult {
   totalOrders: number;
   totalRevenue: number;
   avgOrderValue: number;
+  stdOrderValue: number;
   byStatus: StatusBucket[];
   byPayment: StatusBucket[];
   topCountries: CountryBucket[];
+  chebyshev: ChebyshevCheck[];
 }
+
+/** Chebyshev's inequality: for ANY distribution (no normality assumption,
+ *  unlike most other bounds), at least 1 - 1/k^2 of values lie within k
+ *  standard deviations of the mean. It's deliberately a loose, worst-case
+ *  guarantee rather than an estimate — checked here against what this
+ *  dataset's order values actually do, which is usually far inside the
+ *  bound, and that gap is the point: the guarantee holds for any shape
+ *  the distribution could have taken, not just this one. */
+export interface ChebyshevCheck {
+  k: number;
+  guaranteedPct: number; // 100 * (1 - 1/k^2)
+  actualPct: number;
+  lowerBound: number;
+  upperBound: number;
+}
+
+const CHEBYSHEV_K = [1.5, 2, 3];
+
 
 const STATUS_ORDER = ["pending", "processing", "shipped", "delivered"];
 
@@ -58,12 +78,31 @@ export function computeFunnel({ orders }: BuyerDataset): FunnelResult | null {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 8);
 
+  const avgOrderValue = totalRevenue / orders.length;
+  const variance = orders.reduce((a, o) => a + (o.totalAmount - avgOrderValue) ** 2, 0) / orders.length;
+  const stdOrderValue = Math.sqrt(variance);
+
+  const chebyshev: ChebyshevCheck[] = CHEBYSHEV_K.map((k) => {
+    const lowerBound = avgOrderValue - k * stdOrderValue;
+    const upperBound = avgOrderValue + k * stdOrderValue;
+    const within = orders.filter((o) => o.totalAmount >= lowerBound && o.totalAmount <= upperBound).length;
+    return {
+      k,
+      guaranteedPct: 100 * (1 - 1 / (k * k)),
+      actualPct: (within / orders.length) * 100,
+      lowerBound,
+      upperBound,
+    };
+  });
+
   return {
     totalOrders: orders.length,
     totalRevenue,
-    avgOrderValue: totalRevenue / orders.length,
+    avgOrderValue,
+    stdOrderValue,
     byStatus,
     byPayment,
     topCountries,
+    chebyshev,
   };
 }

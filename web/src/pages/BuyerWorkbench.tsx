@@ -7,6 +7,7 @@ import { loadBuyerDataset } from "../lib/buyer/parse";
 import { computeSegments } from "../lib/buyer/segments";
 import { computeFunnel } from "../lib/buyer/funnel";
 import { computeCatalog } from "../lib/buyer/catalog";
+import { solveRestockLP } from "../lib/buyer/restock";
 import type { BuyerDataset } from "../lib/buyer/types";
 import CustomersTab from "../components/buyer/CustomersTab";
 import OrdersTab from "../components/buyer/OrdersTab";
@@ -23,6 +24,10 @@ export default function BuyerWorkbench() {
   const [dataset, setDataset] = useState<BuyerDataset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("customers");
+  // Default to roughly a fifth of what full restocking would cost, once the
+  // dataset loads — enough budget to see a real trade-off, not a trivial
+  // "fund everything" or "fund nothing" case.
+  const [restockBudget, setRestockBudget] = useState(1_000_000);
 
   useEffect(() => {
     loadBuyerDataset()
@@ -33,6 +38,7 @@ export default function BuyerWorkbench() {
   const segments = useMemo(() => (dataset ? computeSegments(dataset) : null), [dataset]);
   const funnel = useMemo(() => (dataset ? computeFunnel(dataset) : null), [dataset]);
   const catalog = useMemo(() => (dataset ? computeCatalog(dataset) : null), [dataset]);
+  const restockPlan = useMemo(() => (dataset ? solveRestockLP(dataset, restockBudget) : null), [dataset, restockBudget]);
 
   return (
     <div className="min-h-screen">
@@ -88,7 +94,7 @@ export default function BuyerWorkbench() {
           >
             {tab === "customers" && <CustomersTab result={segments} />}
             {tab === "orders" && <OrdersTab result={funnel} />}
-            {tab === "catalog" && <CatalogTab result={catalog} />}
+            {tab === "catalog" && <CatalogTab result={catalog} restockPlan={restockPlan} restockBudget={restockBudget} setRestockBudget={setRestockBudget} />}
           </motion.div>
         )}
       </div>

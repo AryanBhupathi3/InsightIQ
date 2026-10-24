@@ -1,6 +1,7 @@
-import { SectionLabel, StatRow, VerdictPanel, Chip } from "../Atoms";
+import { SectionLabel, StatRow, StatusRow, VerdictPanel, Chip } from "../Atoms";
 import AnimatedNumber from "../AnimatedNumber";
 import Disclosure from "../Disclosure";
+import FormulaBlock from "../FormulaBlock";
 import type { FunnelResult } from "../../lib/buyer/funnel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 
@@ -20,7 +21,7 @@ export default function OrdersTab({ result }: { result: FunnelResult | null }) {
     return <div className="glass rounded-2xl px-6 py-12 text-center text-ink-muted">No order data loaded.</div>;
   }
 
-  const { totalOrders, totalRevenue, avgOrderValue, byStatus, byPayment, topCountries } = result;
+  const { totalOrders, totalRevenue, avgOrderValue, stdOrderValue, byStatus, byPayment, topCountries, chebyshev } = result;
   const delivered = byStatus.find((s) => s.status === "delivered")?.count ?? 0;
   const pending = byStatus.find((s) => s.status === "pending")?.count ?? 0;
   const deliveredPct = (delivered / totalOrders) * 100;
@@ -95,14 +96,39 @@ export default function OrdersTab({ result }: { result: FunnelResult | null }) {
           { label: "Total orders", numeric: totalOrders, format: num },
           { label: "Total revenue", numeric: totalRevenue, format: money, tone: "accent" },
           { label: "Avg order value", numeric: avgOrderValue, format: money },
+          { label: "Std. deviation", numeric: stdOrderValue, format: money, sub: "order value" },
         ]}
       />
+
+      <SectionLabel>How spread out are order values?</SectionLabel>
+      <p className="text-[0.86rem] text-ink-soft leading-relaxed max-w-2xl mb-4">
+        <b>Chebyshev's inequality</b> guarantees a minimum share of orders within k standard deviations of the
+        average — for <i>any</i> distribution shape, not just a bell curve, which is what makes it a safe
+        worst-case bound rather than an estimate. Checked against what this data actually does:
+      </p>
+      <div className="mb-5">
+        {chebyshev.map((c) => (
+          <StatusRow
+            key={c.k}
+            ok={c.actualPct >= c.guaranteedPct}
+            label={`Within ${c.k}σ ($${c.lowerBound < 0 ? 0 : c.lowerBound.toFixed(0)}–$${c.upperBound.toFixed(0)})`}
+            detail={`guaranteed ≥${c.guaranteedPct.toFixed(1)}% · actual ${c.actualPct.toFixed(1)}%`}
+          />
+        ))}
+      </div>
+      <FormulaBlock label="Chebyshev's inequality" tex="P(|X-\mu|\ge k\sigma) \le \frac{1}{k^2} \quad\Longrightarrow\quad P(|X-\mu|<k\sigma)\ge 1-\frac{1}{k^2}" />
 
       <SectionLabel>The method</SectionLabel>
       <Disclosure label="How did we determine this?">
         <p className="text-[0.86rem] text-ink-soft leading-relaxed max-w-2xl mb-4">
           Every order is bucketed by its status, payment method, and ship-to country, straight off the columns in
           order.csv — no joins, no derived assumptions.
+        </p>
+        <p className="text-[0.82rem] text-ink-muted leading-relaxed max-w-2xl mb-4">
+          The gap between Chebyshev's guarantee and the actual share above is the point, not a loose end: the
+          bound has to hold even in the worst case, for a distribution shaped nothing like this one, so real data
+          — which has actual structure — almost always lands well inside it. It isn't a tight estimate; it's a
+          guarantee that holds no matter what.
         </p>
         <Chip
           tone="neutral"
