@@ -2,6 +2,7 @@ import { SectionLabel, StatRow, StatusRow, VerdictPanel } from "../Atoms";
 import AnimatedNumber from "../AnimatedNumber";
 import Disclosure from "../Disclosure";
 import FormulaBlock from "../FormulaBlock";
+import BuyerDataPanel, { type BuyerDataPanelProps } from "./BuyerDataPanel";
 import type { SegmentResult } from "../../lib/buyer/segments";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 
@@ -19,9 +20,14 @@ const FALLBACK_SEQ = ["var(--color-series-1)", "var(--color-series-2)", "var(--c
 const money = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const num = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-export default function CustomersTab({ result }: { result: SegmentResult | null }) {
+export default function CustomersTab({ result, dataPanel }: { result: SegmentResult | null; dataPanel: BuyerDataPanelProps }) {
   if (!result) {
-    return <div className="glass rounded-2xl px-6 py-12 text-center text-ink-muted">Not enough order history to segment customers.</div>;
+    return (
+      <div>
+        <BuyerDataPanel {...dataPanel} />
+        <div className="glass rounded-2xl px-6 py-12 text-center text-ink-muted">Not enough order history to segment customers.</div>
+      </div>
+    );
   }
 
   const { customers, summary, clusters, iterations, converged } = result;
@@ -32,6 +38,7 @@ export default function CustomersTab({ result }: { result: SegmentResult | null 
 
   return (
     <div>
+      <BuyerDataPanel {...dataPanel} />
       <div className="mb-1 font-mono text-[0.7rem] tracking-wider uppercase text-accent">Buyer side · Customers</div>
       <h1 className="font-display italic text-[2.5rem] leading-[1.02] tracking-[-0.02em] mb-3">Customer segments</h1>
       <p className="text-[0.9rem] text-ink-muted max-w-xl mb-6">

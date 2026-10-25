@@ -31,12 +31,14 @@ function parseMDY(v: string | undefined): number {
 
 function parseCustomers(text: string): Customer[] {
   // CustomerID,FirstName,LastName,Email,PhoneNumber,Address,,Country,DateOfBirth,Gender
-  return parseRows(text).map((r) => ({
-    customerId: r[0] ?? "",
-    firstName: r[1] ?? "",
-    lastName: r[2] ?? "",
-    country: r[7] ?? "Unknown",
-  }));
+  return parseRows(text)
+    .map((r) => ({
+      customerId: r[0] ?? "",
+      firstName: r[1] ?? "",
+      lastName: r[2] ?? "",
+      country: r[7] ?? "Unknown",
+    }))
+    .filter((c) => c.customerId);
 }
 
 function parseOrders(text: string): Order[] {
@@ -69,15 +71,22 @@ function parseProducts(text: string): Product[] {
   }));
 }
 
+/** Shared by the bundled sample (fetched as text) and a user's own upload
+ *  (read as text via File.text()) — both end up here, since the columns
+ *  are parsed positionally and have to match the sample's layout either way. */
+export function parseBuyerDataset(customerText: string, orderText: string, productText: string): BuyerDataset {
+  return {
+    customers: parseCustomers(customerText),
+    orders: parseOrders(orderText),
+    products: parseProducts(productText),
+  };
+}
+
 export async function loadBuyerDataset(): Promise<BuyerDataset> {
   const [customerText, orderText, productText] = await Promise.all([
     fetch("/data/buyer/customer.csv").then((r) => r.text()),
     fetch("/data/buyer/order.csv").then((r) => r.text()),
     fetch("/data/buyer/product.csv").then((r) => r.text()),
   ]);
-  return {
-    customers: parseCustomers(customerText),
-    orders: parseOrders(orderText),
-    products: parseProducts(productText),
-  };
+  return parseBuyerDataset(customerText, orderText, productText);
 }

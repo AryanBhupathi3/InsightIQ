@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
-import { loadBuyerDataset } from "../lib/buyer/parse";
+import { loadBuyerDataset, parseBuyerDataset } from "../lib/buyer/parse";
 import { computeSegments } from "../lib/buyer/segments";
 import { computeFunnel } from "../lib/buyer/funnel";
 import { computeCatalog } from "../lib/buyer/catalog";
@@ -20,6 +20,8 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
+const SAMPLE_LABEL = "Sample dataset (customer.csv, order.csv, product.csv)";
+
 export default function BuyerWorkbench() {
   const [dataset, setDataset] = useState<BuyerDataset | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +31,53 @@ export default function BuyerWorkbench() {
   // "fund everything" or "fund nothing" case.
   const [restockBudget, setRestockBudget] = useState(1_000_000);
 
+  const [sourceLabel, setSourceLabel] = useState(SAMPLE_LABEL);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "loading">("idle");
+  // Separate from `error` above: a bad upload shouldn't blank the page and
+  // lose whatever dataset was already loaded — it just reports inline in
+  // the data panel and leaves the current dataset in place.
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   useEffect(() => {
     loadBuyerDataset()
       .then(setDataset)
       .catch(() => setError("Couldn't load the buyer-side sample dataset."));
   }, []);
+
+  function handleLoadSample() {
+    setUploadStatus("loading");
+    setUploadError(null);
+    loadBuyerDataset()
+      .then((d) => {
+        setDataset(d);
+        setSourceLabel(SAMPLE_LABEL);
+      })
+      .catch(() => setUploadError("Couldn't reload the sample dataset."))
+      .finally(() => setUploadStatus("idle"));
+  }
+
+  async function handleLoadFiles({ customer, order, product }: { customer: File; order: File; product: File }) {
+    setUploadStatus("loading");
+    setUploadError(null);
+    try {
+      const [customerText, orderText, productText] = await Promise.all([customer.text(), order.text(), product.text()]);
+      const parsed = parseBuyerDataset(customerText, orderText, productText);
+      const empty: string[] = [];
+      if (parsed.customers.length === 0) empty.push("customers file");
+      if (parsed.orders.length === 0) empty.push("orders file");
+      if (parsed.products.length === 0) empty.push("products file");
+      if (empty.length > 0) {
+        setUploadError(`No usable rows found in the ${empty.join(", ")} — check the columns are in the same order as the sample (see above).`);
+        return;
+      }
+      setDataset(parsed);
+      setSourceLabel(`Your files — ${customer.name}, ${order.name}, ${product.name}`);
+    } catch {
+      setUploadError("Couldn't read one of those files as a CSV.");
+    } finally {
+      setUploadStatus("idle");
+    }
+  }
 
   const segments = useMemo(() => (dataset ? computeSegments(dataset) : null), [dataset]);
   const funnel = useMemo(() => (dataset ? computeFunnel(dataset) : null), [dataset]);
@@ -99,7 +143,18 @@ export default function BuyerWorkbench() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", bounce: 0, duration: 0.4 }}
           >
-            {tab === "customers" && <CustomersTab result={segments} />}
+            {tab === "customers" && (
+              <CustomersTab
+                result={segments}
+                dataPanel={{
+                  sourceLabel,
+                  status: uploadStatus,
+                  error: uploadError,
+                  onLoadSample: handleLoadSample,
+                  onLoadFiles: handleLoadFiles,
+                }}
+              />
+            )}
             {tab === "orders" && <OrdersTab result={funnel} />}
             {tab === "catalog" && <CatalogTab result={catalog} restockPlan={restockPlan} restockBudget={restockBudget} setRestockBudget={setRestockBudget} />}
           </motion.div>
