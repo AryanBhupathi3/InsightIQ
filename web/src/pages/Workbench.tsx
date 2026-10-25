@@ -5,6 +5,7 @@ import { useDataset } from "../state/DatasetContext";
 import { buildSeries, entityValues } from "../lib/series";
 import { fitWls, forecastHorizon, forecastFromRegimes } from "../lib/stats";
 import { fitMarkov, nStepDistribution } from "../lib/markov";
+import { runBacktest } from "../lib/backtest";
 import { solveSupplierSelection, kktReport } from "../lib/optimization";
 import { gradientAscent } from "../lib/pricing";
 import { solveReorderMdp } from "../lib/mdp";
@@ -65,6 +66,11 @@ function useWorkbenchState() {
   // per period — the median of the forecast distribution at the horizon's end.
   const dStarDaily = forecast ? forecast.median[forecast.median.length - 1] : null;
   const dStarMonthly = dStarDaily ? Math.max(Math.round(dStarDaily * 30), 1) : null;
+  // Backtest: replays the same forecast against past days that already have
+  // real outcomes after them, to check whether the claimed 50%/90% bands
+  // actually hold up against history instead of only ever being compared to
+  // the unknown future.
+  const backtest = useMemo(() => (series ? runBacktest(series.y, horizon) : null), [series, horizon]);
   const currentState = markov ? markov.stateSeq[markov.stateSeq.length - 1] : null;
   const nStep = useMemo(
     () => (markov && currentState !== null ? nStepDistribution(markov.transitionMatrix, currentState, Math.min(horizon, 30)) : null),
@@ -103,7 +109,7 @@ function useWorkbenchState() {
   return {
     dataset, mapping, constraints, entities, activeEntity, setEntity,
     horizon, setHorizon, halflife, setHalflife,
-    series, wls, wlsBaseline, forecast, dStarDaily, dStarMonthly,
+    series, wls, wlsBaseline, forecast, dStarDaily, dStarMonthly, backtest,
     markov, currentState, nStep,
     mdp, orderQtyMult, setOrderQtyMult, holdingCost, setHoldingCost, stockoutCost, setStockoutCost, orderCost, setOrderCost,
     groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt,

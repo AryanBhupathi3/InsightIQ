@@ -1,15 +1,15 @@
 import type { WorkbenchShared } from "../../pages/Workbench";
-import { SectionLabel, StatRow, EmptyState, VerdictPanel } from "../Atoms";
+import { SectionLabel, StatRow, StatusRow, EmptyState, VerdictPanel } from "../Atoms";
 import AnimatedNumber from "../AnimatedNumber";
 import Disclosure from "../Disclosure";
 import FormulaBlock from "../FormulaBlock";
 import { STATES } from "../../lib/markov";
-import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { ComposedChart, LineChart, Line, Area, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 const num = (v: number) => v.toFixed(1);
 const whole = (v: number) => v.toFixed(0);
 
-export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecast, horizon, setHorizon, mapping, goToData }: WorkbenchShared) {
+export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecast, backtest, horizon, setHorizon, mapping, goToData }: WorkbenchShared) {
   if (!series || !forecast) {
     return (
       <EmptyState
@@ -133,6 +133,52 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
           </ResponsiveContainer>
         </div>
       </div>
+
+      {backtest && (
+        <>
+          <SectionLabel>Does this actually work?</SectionLabel>
+          <p className="text-[0.86rem] text-ink-soft leading-relaxed max-w-2xl mb-4">
+            The fan chart above always points at days that haven't happened yet, so it can't be checked against
+            reality directly. This instead replays the exact same method against every past day that already has
+            real outcomes after it — pretending that day is "today," forecasting from only what was known then,
+            and checking whether what actually happened landed inside the bands it claimed.
+          </p>
+          <div className="mb-5 space-y-2">
+            <StatusRow
+              ok={backtest.nearHit90Rate >= 0.8}
+              label="Next week (90% band)"
+              detail={`claims 90% · actually hit ${whole(backtest.nearHit90Rate * 100)}% of the time, across ${backtest.totalRuns} replays`}
+            />
+            <StatusRow
+              ok={backtest.farHit90Rate >= 0.8}
+              label={`Full ${horizon}-day horizon (90% band)`}
+              detail={`claims 90% · actually hit ${whole(backtest.farHit90Rate * 100)}% of the time`}
+            />
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={backtest.byHorizon.map((b) => ({ h: b.h, hit90: b.hit90Rate * 100, hit50: b.hit50Rate * 100 }))}>
+                <CartesianGrid stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="h" stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} domain={[0, 100]} />
+                <Tooltip contentStyle={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border-strong)", borderRadius: 8, fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <ReferenceLine y={90} stroke="var(--color-ink-faint)" strokeDasharray="4 4" />
+                <ReferenceLine y={50} stroke="var(--color-ink-faint)" strokeDasharray="4 4" />
+                <Line type="monotone" dataKey="hit90" stroke="var(--color-accent)" strokeWidth={2} dot={false} name="90% band — actual hit rate" />
+                <Line type="monotone" dataKey="hit50" stroke="var(--color-series-3)" strokeWidth={2} dot={false} name="50% band — actual hit rate" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-[0.78rem] text-ink-muted leading-relaxed max-w-2xl mt-2 mb-6">
+            Dashed lines are what InsightIQ claims (90% and 50%); solid lines are what actually happened, replayed{" "}
+            {backtest.totalRuns} times across this dataset's own history. If the far end of a solid line sits
+            below its dashed target, that's a real finding, not a bug being hidden: the further out this method
+            looks, the less history it has to draw on for that exact horizon, so it can be more confident than it
+            should be — exactly what the gap above shows, measured rather than assumed.
+          </p>
+        </>
+      )}
 
       <SectionLabel>The proof</SectionLabel>
       <Disclosure label="How did we determine this?">
