@@ -33,21 +33,45 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
   // History, then the forecast fan. The fan is seeded at the last actual
   // point with zero width so it visibly grows out of where demand is today
   // rather than floating detached above the history.
+  //
+  // The trailing `horizon` days of that history also carry a second,
+  // independent band (vLo90/vBand...): what the forecast would have said if
+  // it had been made exactly `horizon` days ago, using only data up to that
+  // point — the one stretch of the past this dataset can fully verify, since
+  // we now know what demand really did afterward. It's drawn in the same
+  // chart as the live forecast, in a different color, so both the claim and
+  // the check sit on one picture instead of two.
   const chartData = [
-    ...series.y.slice(historyStart).map((y, offset) => ({
-      idx: historyStart + offset,
-      actual: y,
-      ...(historyStart + offset === lastIdx
-        ? {
-            median: forecast.anchor,
-            lo90: forecast.anchor,
-            band05_25: 0,
-            band25_75: 0,
-            band75_95: 0,
-            baseline: wls ? wls.intercept + wls.slope * series.t[lastIdx] : undefined,
-          }
-        : {}),
-    })),
+    ...series.y.slice(historyStart).map((y, offset) => {
+      const idx = historyStart + offset;
+      const vIdx = verification ? idx - verification.cutoffIdx - 1 : -1;
+      return {
+        idx,
+        actual: y,
+        ...(idx === lastIdx
+          ? {
+              median: forecast.anchor,
+              lo90: forecast.anchor,
+              band05_25: 0,
+              band25_75: 0,
+              band75_95: 0,
+              baseline: wls ? wls.intercept + wls.slope * series.t[lastIdx] : undefined,
+            }
+          : {}),
+        ...(verification && idx === verification.cutoffIdx
+          ? { vMedian: verification.forecast.anchor, vLo90: verification.forecast.anchor, vBand05_25: 0, vBand25_75: 0, vBand75_95: 0 }
+          : {}),
+        ...(verification && vIdx >= 0 && vIdx < horizon
+          ? {
+              vMedian: verification.forecast.median[vIdx],
+              vLo90: verification.forecast.p05[vIdx],
+              vBand05_25: verification.forecast.p25[vIdx] - verification.forecast.p05[vIdx],
+              vBand25_75: verification.forecast.p75[vIdx] - verification.forecast.p25[vIdx],
+              vBand75_95: verification.forecast.p95[vIdx] - verification.forecast.p75[vIdx],
+            }
+          : {}),
+      };
+    }),
     ...forecast.median.map((m, i) => ({
       idx: lastIdx + 1 + i,
       median: m,
@@ -69,34 +93,6 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
   const direction =
     medianEnd > forecast.anchor * 1.05 ? "drifts higher" : medianEnd < forecast.anchor * 0.95 ? "drifts lower" : "holds roughly level";
   const minAnalogs = Math.min(...forecast.analogCounts);
-
-  // The verification chart: same fan-chart shape as the live forecast above,
-  // but anchored at a past day instead of today, with the real outcome that
-  // followed drawn as the "actual" line right through the shaded region —
-  // so you can see directly whether reality stayed inside the claimed bands.
-  const verificationChartData = verification
-    ? (() => {
-        const vHistoryStart = Math.max(0, verification.cutoffIdx - Math.max(30, horizon));
-        return [
-          ...series.y.slice(vHistoryStart, verification.cutoffIdx + 1).map((y, offset) => ({
-            idx: vHistoryStart + offset,
-            actual: y,
-            ...(vHistoryStart + offset === verification.cutoffIdx
-              ? { median: verification.forecast.anchor, lo90: verification.forecast.anchor, band05_25: 0, band25_75: 0, band75_95: 0 }
-              : {}),
-          })),
-          ...verification.actualFuture.map((y, i) => ({
-            idx: verification.cutoffIdx + 1 + i,
-            actual: y,
-            median: verification.forecast.median[i],
-            lo90: verification.forecast.p05[i],
-            band05_25: verification.forecast.p25[i] - verification.forecast.p05[i],
-            band25_75: verification.forecast.p75[i] - verification.forecast.p25[i],
-            band75_95: verification.forecast.p95[i] - verification.forecast.p75[i],
-          })),
-        ];
-      })()
-    : null;
   const verificationHit90Pct = verification ? (verification.hit90 / horizon) * 100 : 0;
   // Over short horizons the range can come out flat — day-to-day swings are
   // already wide, so another few days adds little. Say what's true rather
@@ -149,8 +145,25 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
               <YAxis stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
               <Tooltip contentStyle={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border-strong)", borderRadius: 8, fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              {/* Fan chart: stacked transparent base + three ribbons, so the
-                  50% core reads darker than the 90% outer range. */}
+              {verification && (
+                <ReferenceLine
+                  x={lastIdx}
+                  stroke="var(--color-ink-faint)"
+                  strokeDasharray="4 4"
+                  label={{ value: "today", position: "insideTopRight", fontSize: 10, fill: "var(--color-ink-muted)" }}
+                />
+              )}
+              {/* Verified band: what the forecast would have said `horizon`
+                  days ago, over the one trailing stretch of history we can
+                  now check against the real outcome — drawn in green so it
+                  reads as distinct from the live, unverified projection. */}
+              <Area dataKey="vLo90" stackId="vfan" stroke="none" fill="transparent" isAnimationActive={false} legendType="none" name="" />
+              <Area dataKey="vBand05_25" stackId="vfan" stroke="none" fill="var(--color-series-3)" fillOpacity={0.12} isAnimationActive={false} name="90% range (verified)" legendType="rect" />
+              <Area dataKey="vBand25_75" stackId="vfan" stroke="none" fill="var(--color-series-3)" fillOpacity={0.24} isAnimationActive={false} name="50% range (verified)" legendType="rect" />
+              <Area dataKey="vBand75_95" stackId="vfan" stroke="none" fill="var(--color-series-3)" fillOpacity={0.12} isAnimationActive={false} legendType="none" name="" />
+              <Line type="monotone" dataKey="vMedian" stroke="var(--color-series-3)" strokeWidth={1.6} strokeDasharray="3 3" dot={false} name="Most likely (verified)" />
+              {/* Live fan chart: stacked transparent base + three ribbons, so
+                  the 50% core reads darker than the 90% outer range. */}
               <Area dataKey="lo90" stackId="fan" stroke="none" fill="transparent" isAnimationActive={false} legendType="none" name="" />
               <Area dataKey="band05_25" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.1} isAnimationActive={false} name="90% range" legendType="rect" />
               <Area dataKey="band25_75" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.22} isAnimationActive={false} name="50% range" legendType="rect" />
@@ -163,60 +176,27 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
         </div>
       </div>
 
-      {backtest && verification && verificationChartData && (
-        <>
-          <SectionLabel>Does this actually work?</SectionLabel>
-          <p className="text-[0.86rem] text-ink-soft leading-relaxed max-w-2xl mb-4">
-            The fan chart above always points at days that haven't happened yet, so it can't be checked against
-            reality directly. This instead rewinds to the most recent day that still has a full {horizon}-day
-            stretch of real outcomes after it, pretends that day is "today," builds the forecast from only
-            what was knowable then — and draws what demand actually went on to do right on top of the bands
-            it claimed, so you can see for yourself whether reality stayed inside them.
+      {backtest && verification && (
+        <div className="mt-5 max-w-2xl">
+          <p className="text-[0.8rem] text-ink-muted leading-relaxed mb-3">
+            The green band is a check, not a projection: it's what this method would have forecast {horizon}{" "}
+            days ago, built from only the data available then — and we now know what demand actually did, so
+            the real "Actual" line passing through it either stayed inside the shading or it didn't. The blue
+            band past "today" is the live, unverified forecast — the whole reason the check exists.
           </p>
-          <div className="mb-5 space-y-2">
+          <div className="space-y-2">
             <StatusRow
               ok={verificationHit90Pct >= 80}
-              label="This replay (90% band)"
-              detail={`claimed 90% · real demand landed inside the band on ${verification.hit90} of ${horizon} days (${whole(verificationHit90Pct)}%)`}
+              label="Verified band (90%), this stretch"
+              detail={`claimed 90% · real demand landed inside it on ${verification.hit90} of ${horizon} days (${whole(verificationHit90Pct)}%)`}
             />
             <StatusRow
               ok={backtest.farHit90Rate >= 0.8}
-              label="Across every such replay in this dataset"
+              label="Across every such stretch in this dataset"
               detail={`claims 90% · actually hit ${whole(backtest.farHit90Rate * 100)}% of the time, over ${backtest.totalRuns} replays`}
             />
           </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={verificationChartData}>
-                <CartesianGrid stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="idx" stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
-                <YAxis stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
-                <Tooltip contentStyle={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border-strong)", borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <ReferenceLine
-                  x={verification.cutoffIdx}
-                  stroke="var(--color-ink-faint)"
-                  strokeDasharray="4 4"
-                  label={{ value: "forecast made here", position: "insideTopLeft", fontSize: 10, fill: "var(--color-ink-muted)" }}
-                />
-                <Area dataKey="lo90" stackId="fan" stroke="none" fill="transparent" isAnimationActive={false} legendType="none" name="" />
-                <Area dataKey="band05_25" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.1} isAnimationActive={false} name="90% range (claimed)" legendType="rect" />
-                <Area dataKey="band25_75" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.22} isAnimationActive={false} name="50% range (claimed)" legendType="rect" />
-                <Area dataKey="band75_95" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.1} isAnimationActive={false} legendType="none" name="" />
-                <Line type="monotone" dataKey="actual" stroke="var(--color-series-1)" strokeWidth={1.6} dot={false} name="What actually happened" />
-                <Line type="monotone" dataKey="median" stroke="var(--color-accent)" strokeWidth={2.2} dot={false} name="Most likely (claimed)" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-[0.78rem] text-ink-muted leading-relaxed max-w-2xl mt-2 mb-6">
-            Left of the dashed line is real history the forecast was allowed to see when it was made; right of
-            it is real history it was NOT allowed to see — the shaded bands are what it projected from only
-            the data to the left. The solid line continuing past the marker is what demand actually did; if it
-            stays inside the shading, the claimed range held up. This isn't a cherry-picked example — it's
-            always the most recent {horizon}-day stretch this dataset can fully verify, so it updates as you
-            change the horizon or the data.
-          </p>
-        </>
+        </div>
       )}
 
       <SectionLabel>The proof</SectionLabel>
