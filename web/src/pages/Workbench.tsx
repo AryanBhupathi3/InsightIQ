@@ -8,7 +8,6 @@ import { fitMarkov, nStepDistribution } from "../lib/markov";
 import { runBacktest, buildVerificationExample } from "../lib/backtest";
 import { solveSupplierSelection, kktReport } from "../lib/optimization";
 import { gradientAscent } from "../lib/pricing";
-import { solveReorderMdp } from "../lib/mdp";
 import { LockIcon, LockedPanel } from "../components/Atoms";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
@@ -36,10 +35,6 @@ function useWorkbenchState() {
   const [budgetMult, setBudgetMult] = useState(1.6);
   const [epsilon, setEpsilon] = useState(1.8);
   const [lr, setLr] = useState(0.15);
-  const [orderQtyMult, setOrderQtyMult] = useState(3);
-  const [holdingCost, setHoldingCost] = useState(1);
-  const [stockoutCost, setStockoutCost] = useState(5);
-  const [orderCost, setOrderCost] = useState(50);
 
   const series = useMemo(
     () => (dataset && mapping.demand ? buildSeries(dataset, mapping, activeEntity) : null),
@@ -82,14 +77,6 @@ function useWorkbenchState() {
     [markov, currentState, horizon]
   );
 
-  // Step 4b — the reorder decision built on top of the chain above. Demand
-  // draws come from this SKU's own real history (series.y); orderQtyMult
-  // and the three costs are honest policy parameters, not fit from data.
-  const mdp = useMemo(
-    () => (series && series.y.length >= 10 ? solveReorderMdp(series.y, orderQtyMult, holdingCost, stockoutCost, orderCost) : null),
-    [series, orderQtyMult, holdingCost, stockoutCost, orderCost]
-  );
-
   const groups = constraints?.groups ?? [];
   const demandForSupplier = dStarMonthly ?? (constraints ? Math.round(constraints.demandMean * 30) : 1000);
   const minCost = groups.length ? Math.min(...groups.map((g) => g.cost)) : 1;
@@ -116,7 +103,6 @@ function useWorkbenchState() {
     horizon, setHorizon, halflife, setHalflife,
     series, wls, wlsBaseline, forecast, dStarDaily, dStarMonthly, backtest, verification,
     markov, currentState, nStep,
-    mdp, orderQtyMult, setOrderQtyMult, holdingCost, setHoldingCost, stockoutCost, setStockoutCost, orderCost, setOrderCost,
     groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt,
     epsilon, setEpsilon, lr, setLr, costPerUnit, priceResult,
   };
