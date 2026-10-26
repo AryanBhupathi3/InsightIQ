@@ -25,17 +25,11 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Link
-              to="/buyer"
-              className="pressable text-[0.82rem] font-semibold px-4 py-1.5 rounded-full border border-border-strong text-ink-soft hover:text-ink hover:border-ink-faint transition-colors duration-150"
-            >
-              Buyer side
-            </Link>
-            <Link
               to="/app"
               className="pressable text-[0.82rem] font-semibold px-4 py-1.5 rounded-full bg-accent text-bg hover:bg-accent-hover transition-[background-color] duration-150"
               style={{ boxShadow: "0 4px 20px -4px var(--color-accent-ring)" }}
             >
-              Seller side
+              Open InsightIQ
             </Link>
           </div>
         </div>
@@ -68,18 +62,11 @@ export default function Home() {
                 className="pressable text-[0.9rem] font-semibold px-6 py-3 rounded-full bg-accent text-bg hover:bg-accent-hover transition-[background-color] duration-150"
                 style={{ boxShadow: "0 8px 30px -6px var(--color-accent-ring)" }}
               >
-                Seller side →
-              </Link>
-              <Link
-                to="/buyer"
-                className="pressable text-[0.9rem] font-semibold px-6 py-3 rounded-full glass text-ink hover:text-accent transition-colors duration-150"
-              >
-                Buyer side →
+                Open the workbench →
               </Link>
             </div>
             <p className="text-[0.8rem] text-ink-muted mt-3">
-              Seller side takes your own CSV or a sample. Buyer side runs on a bundled sample dataset of
-              customers, orders, and the product catalog.
+              Takes your own CSV, or a bundled sample dataset.
             </p>
           </Reveal>
         </div>
