@@ -20,6 +20,12 @@ import DecisionTab from "../components/workbench/DecisionTab";
 
 const LOCKED_TABS: TabKey[] = [];
 
+// Rush-order penalty for supplier selection — fixed, not user-adjustable.
+// Keeps the per-supplier cost genuinely quadratic (c_i(x) = p_i*x + 0.5*GAMMA*x^2),
+// so the allocation stays a real convex program with an interior-supplier case,
+// instead of degenerating into a cheapest-first greedy fill.
+const GAMMA = 0.002;
+
 export type WorkbenchShared = ReturnType<typeof useWorkbenchState> & { goToData: () => void };
 
 function useWorkbenchState() {
@@ -31,7 +37,6 @@ function useWorkbenchState() {
 
   const [horizon, setHorizon] = useState(30);
   const [halflife, setHalflife] = useState(14);
-  const [gamma, setGamma] = useState(0.002);
   const [budgetMult, setBudgetMult] = useState(1.6);
   const [epsilon, setEpsilon] = useState(1.8);
   const [lr, setLr] = useState(0.15);
@@ -85,9 +90,9 @@ function useWorkbenchState() {
   const supplierSolution = useMemo(
     () =>
       groups.length > 0
-        ? solveSupplierSelection(groups.map((g) => g.name), groups.map((g) => g.cost), groups.map((g) => g.capacity), demandForSupplier, budget, gamma)
+        ? solveSupplierSelection(groups.map((g) => g.name), groups.map((g) => g.cost), groups.map((g) => g.capacity), demandForSupplier, budget, GAMMA)
         : null,
-    [groups, demandForSupplier, budget, gamma]
+    [groups, demandForSupplier, budget]
   );
   const kkt = supplierSolution ? kktReport(supplierSolution) : null;
 
@@ -103,7 +108,7 @@ function useWorkbenchState() {
     horizon, setHorizon, halflife, setHalflife,
     series, wls, wlsBaseline, forecast, dStarDaily, dStarMonthly, backtest, verification,
     markov, currentState, nStep,
-    groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt,
+    groups, budgetMult, setBudgetMult, budget, supplierSolution, kkt,
     epsilon, setEpsilon, lr, setLr, costPerUnit, priceResult,
   };
 }

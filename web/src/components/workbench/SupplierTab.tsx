@@ -10,7 +10,7 @@ const SERIES = ["var(--color-series-1)", "var(--color-series-2)", "var(--color-s
 const money = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const units = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMult, setBudgetMult, budget, supplierSolution, kkt, goToData }: WorkbenchShared) {
+export default function SupplierTab({ dataset, groups, budgetMult, setBudgetMult, budget, supplierSolution, kkt, goToData }: WorkbenchShared) {
   if (groups.length === 0) {
     return (
       <EmptyState
@@ -106,15 +106,6 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
           />
           <label className="block">
             <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
-              <span>Rush-order penalty γ</span><span className="tabular">{gamma.toFixed(3)}</span>
-            </div>
-            {/* Floor is 0.001, not 0: the water-filling solve divides by gamma,
-                so gamma=0 degenerates to a divide-by-zero and NaNs the whole
-                downstream pipeline. */}
-            <input type="range" min={0.001} max={0.02} step={0.001} value={gamma} onChange={(e) => setGamma(+e.target.value)} className="w-full accent-accent" />
-          </label>
-          <label className="block">
-            <div className="flex justify-between font-mono text-[0.65rem] uppercase text-ink-muted mb-1">
               <span>Budget headroom (× min cost)</span><span className="tabular">{budgetMult.toFixed(1)}×</span>
             </div>
             <input type="range" min={1} max={3} step={0.1} value={budgetMult} onChange={(e) => setBudgetMult(+e.target.value)} className="w-full accent-accent" />
@@ -175,7 +166,7 @@ export default function SupplierTab({ dataset, groups, gamma, setGamma, budgetMu
                     ? "Optimal for the achievable target — proceed to Step 7"
                     : "Optimal — proceed to Step 7"
                   : overBudget
-                  ? "Infeasible at this budget — raise headroom or lower γ"
+                  ? "Infeasible at this budget — raise headroom"
                   : "KKT check failed — see conditions above"
               }
             />
