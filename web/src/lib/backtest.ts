@@ -1,5 +1,5 @@
 import { discretize } from "./markov";
-import { forecastFromRegimes } from "./stats";
+import { forecastFromRegimes, type RegimeForecast } from "./stats";
 
 export interface BacktestHorizonStat {
   h: number;
@@ -70,4 +70,46 @@ export function runBacktest(y: number[], horizon: number): BacktestResult | null
   const farHit90Rate = byHorizon[byHorizon.length - 1].hit90Rate;
 
   return { byHorizon, totalRuns, nearHit90Rate, farHit90Rate };
+}
+
+export interface VerificationExample {
+  /** Index into the full series where the forecast was pretended to be made. */
+  cutoffIdx: number;
+  /** The forecast as it would have looked, built from only data up to cutoffIdx. */
+  forecast: RegimeForecast;
+  /** What demand actually did over the next `horizon` periods — already known,
+   *  since cutoffIdx was chosen so this much real data exists after it. */
+  actualFuture: number[];
+  hit50: number; // how many of those real periods landed inside the claimed 50% band
+  hit90: number; // how many landed inside the claimed 90% band
+}
+
+/** A single, concrete worked example for "does this actually work?" — rather
+ *  than an aggregate hit-rate statistic, this picks the most recent day that
+ *  still has a full `horizon` days of real outcomes after it, pretends that
+ *  day is "today" (recomputing the Low/Medium/High bands from only the
+ *  truncated history, same as runBacktest), and hands back both the forecast
+ *  it would have made and what demand really went on to do — so the two can
+ *  be drawn on the same chart as the live Forecast tab uses, with the real
+ *  path laid directly on top of the claimed bands. */
+export function buildVerificationExample(y: number[], horizon: number): VerificationExample | null {
+  const minHistory = Math.max(MIN_HISTORY_FLOOR, horizon * 2);
+  if (y.length < minHistory + horizon + 1) return null;
+
+  const cutoffIdx = y.length - 1 - horizon;
+  if (cutoffIdx < minHistory) return null;
+
+  const yTrunc = y.slice(0, cutoffIdx + 1);
+  const { states } = discretize(yTrunc);
+  const forecast = forecastFromRegimes(yTrunc, states, horizon);
+  if (!forecast) return null;
+
+  const actualFuture = y.slice(cutoffIdx + 1, cutoffIdx + 1 + horizon);
+  let hit50 = 0, hit90 = 0;
+  actualFuture.forEach((actual, i) => {
+    if (actual >= forecast.p25[i] && actual <= forecast.p75[i]) hit50++;
+    if (actual >= forecast.p05[i] && actual <= forecast.p95[i]) hit90++;
+  });
+
+  return { cutoffIdx, forecast, actualFuture, hit50, hit90 };
 }

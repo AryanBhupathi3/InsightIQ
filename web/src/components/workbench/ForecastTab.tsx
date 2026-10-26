@@ -4,12 +4,12 @@ import AnimatedNumber from "../AnimatedNumber";
 import Disclosure from "../Disclosure";
 import FormulaBlock from "../FormulaBlock";
 import { STATES } from "../../lib/markov";
-import { ComposedChart, LineChart, Line, Area, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { ComposedChart, Line, Area, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 const num = (v: number) => v.toFixed(1);
 const whole = (v: number) => v.toFixed(0);
 
-export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecast, backtest, horizon, setHorizon, mapping, goToData }: WorkbenchShared) {
+export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecast, backtest, verification, horizon, setHorizon, mapping, goToData }: WorkbenchShared) {
   if (!series || !forecast) {
     return (
       <EmptyState
@@ -69,6 +69,35 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
   const direction =
     medianEnd > forecast.anchor * 1.05 ? "drifts higher" : medianEnd < forecast.anchor * 0.95 ? "drifts lower" : "holds roughly level";
   const minAnalogs = Math.min(...forecast.analogCounts);
+
+  // The verification chart: same fan-chart shape as the live forecast above,
+  // but anchored at a past day instead of today, with the real outcome that
+  // followed drawn as the "actual" line right through the shaded region —
+  // so you can see directly whether reality stayed inside the claimed bands.
+  const verificationChartData = verification
+    ? (() => {
+        const vHistoryStart = Math.max(0, verification.cutoffIdx - Math.max(30, horizon));
+        return [
+          ...series.y.slice(vHistoryStart, verification.cutoffIdx + 1).map((y, offset) => ({
+            idx: vHistoryStart + offset,
+            actual: y,
+            ...(vHistoryStart + offset === verification.cutoffIdx
+              ? { median: verification.forecast.anchor, lo90: verification.forecast.anchor, band05_25: 0, band25_75: 0, band75_95: 0 }
+              : {}),
+          })),
+          ...verification.actualFuture.map((y, i) => ({
+            idx: verification.cutoffIdx + 1 + i,
+            actual: y,
+            median: verification.forecast.median[i],
+            lo90: verification.forecast.p05[i],
+            band05_25: verification.forecast.p25[i] - verification.forecast.p05[i],
+            band25_75: verification.forecast.p75[i] - verification.forecast.p25[i],
+            band75_95: verification.forecast.p95[i] - verification.forecast.p75[i],
+          })),
+        ];
+      })()
+    : null;
+  const verificationHit90Pct = verification ? (verification.hit90 / horizon) * 100 : 0;
   // Over short horizons the range can come out flat — day-to-day swings are
   // already wide, so another few days adds little. Say what's true rather
   // than asserting it always fans out.
@@ -134,48 +163,58 @@ export default function ForecastTab({ dataset, series, wls, wlsBaseline, forecas
         </div>
       </div>
 
-      {backtest && (
+      {backtest && verification && verificationChartData && (
         <>
           <SectionLabel>Does this actually work?</SectionLabel>
           <p className="text-[0.86rem] text-ink-soft leading-relaxed max-w-2xl mb-4">
             The fan chart above always points at days that haven't happened yet, so it can't be checked against
-            reality directly. This instead replays the exact same method against every past day that already has
-            real outcomes after it — pretending that day is "today," forecasting from only what was known then,
-            and checking whether what actually happened landed inside the bands it claimed.
+            reality directly. This instead rewinds to the most recent day that still has a full {horizon}-day
+            stretch of real outcomes after it, pretends that day is "today," builds the forecast from only
+            what was knowable then — and draws what demand actually went on to do right on top of the bands
+            it claimed, so you can see for yourself whether reality stayed inside them.
           </p>
           <div className="mb-5 space-y-2">
             <StatusRow
-              ok={backtest.nearHit90Rate >= 0.8}
-              label="Next week (90% band)"
-              detail={`claims 90% · actually hit ${whole(backtest.nearHit90Rate * 100)}% of the time, across ${backtest.totalRuns} replays`}
+              ok={verificationHit90Pct >= 80}
+              label="This replay (90% band)"
+              detail={`claimed 90% · real demand landed inside the band on ${verification.hit90} of ${horizon} days (${whole(verificationHit90Pct)}%)`}
             />
             <StatusRow
               ok={backtest.farHit90Rate >= 0.8}
-              label={`Full ${horizon}-day horizon (90% band)`}
-              detail={`claims 90% · actually hit ${whole(backtest.farHit90Rate * 100)}% of the time`}
+              label="Across every such replay in this dataset"
+              detail={`claims 90% · actually hit ${whole(backtest.farHit90Rate * 100)}% of the time, over ${backtest.totalRuns} replays`}
             />
           </div>
-          <div className="h-56">
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={backtest.byHorizon.map((b) => ({ h: b.h, hit90: b.hit90Rate * 100, hit50: b.hit50Rate * 100 }))}>
+              <ComposedChart data={verificationChartData}>
                 <CartesianGrid stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="h" stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
-                <YAxis stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} domain={[0, 100]} />
+                <XAxis dataKey="idx" stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--color-ink-faint)" fontSize={11} tickLine={false} />
                 <Tooltip contentStyle={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-border-strong)", borderRadius: 8, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <ReferenceLine y={90} stroke="var(--color-ink-faint)" strokeDasharray="4 4" />
-                <ReferenceLine y={50} stroke="var(--color-ink-faint)" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="hit90" stroke="var(--color-accent)" strokeWidth={2} dot={false} name="90% band — actual hit rate" />
-                <Line type="monotone" dataKey="hit50" stroke="var(--color-series-3)" strokeWidth={2} dot={false} name="50% band — actual hit rate" />
-              </LineChart>
+                <ReferenceLine
+                  x={verification.cutoffIdx}
+                  stroke="var(--color-ink-faint)"
+                  strokeDasharray="4 4"
+                  label={{ value: "forecast made here", position: "insideTopLeft", fontSize: 10, fill: "var(--color-ink-muted)" }}
+                />
+                <Area dataKey="lo90" stackId="fan" stroke="none" fill="transparent" isAnimationActive={false} legendType="none" name="" />
+                <Area dataKey="band05_25" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.1} isAnimationActive={false} name="90% range (claimed)" legendType="rect" />
+                <Area dataKey="band25_75" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.22} isAnimationActive={false} name="50% range (claimed)" legendType="rect" />
+                <Area dataKey="band75_95" stackId="fan" stroke="none" fill="var(--color-accent)" fillOpacity={0.1} isAnimationActive={false} legendType="none" name="" />
+                <Line type="monotone" dataKey="actual" stroke="var(--color-series-1)" strokeWidth={1.6} dot={false} name="What actually happened" />
+                <Line type="monotone" dataKey="median" stroke="var(--color-accent)" strokeWidth={2.2} dot={false} name="Most likely (claimed)" />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
           <p className="text-[0.78rem] text-ink-muted leading-relaxed max-w-2xl mt-2 mb-6">
-            Dashed lines are what InsightIQ claims (90% and 50%); solid lines are what actually happened, replayed{" "}
-            {backtest.totalRuns} times across this dataset's own history. If the far end of a solid line sits
-            below its dashed target, that's a real finding, not a bug being hidden: the further out this method
-            looks, the less history it has to draw on for that exact horizon, so it can be more confident than it
-            should be — exactly what the gap above shows, measured rather than assumed.
+            Left of the dashed line is real history the forecast was allowed to see when it was made; right of
+            it is real history it was NOT allowed to see — the shaded bands are what it projected from only
+            the data to the left. The solid line continuing past the marker is what demand actually did; if it
+            stays inside the shading, the claimed range held up. This isn't a cherry-picked example — it's
+            always the most recent {horizon}-day stretch this dataset can fully verify, so it updates as you
+            change the horizon or the data.
           </p>
         </>
       )}
